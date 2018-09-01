@@ -78,6 +78,7 @@ class DefaultController extends BaseController
 
         try {
 
+            /*
             $client = new LdapClient();
             $client->setLogger($this->get('logger'));
 
@@ -91,7 +92,7 @@ class DefaultController extends BaseController
                 ->setUseSSL($this->container->getParameter('ldap_usessl'))
                 ->setUserNameField($this->container->getParameter('ldap_usernamefield'))
                 ->login();
-
+            */
             $user = $this->getDoctrine()
                 ->getRepository('NetresearchTimeTrackerBundle:User')
                 ->findOneByUsername($username);
