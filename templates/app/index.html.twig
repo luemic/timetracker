@@ -1,0 +1,391 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Zeiterfassung{% endblock %}
+
+{% block body %}
+<div id="app">
+  <div class="mb-4 border-bottom">
+    <ul class="nav nav-tabs">
+      <li class="nav-item"><button class="nav-link" :class="{active: tab==='time'}" @click="tab='time'">Zeitbuchungen</button></li>
+      <li class="nav-item"><button class="nav-link" :class="{active: tab==='customers'}" @click="tab='customers'">Kunden</button></li>
+      <li class="nav-item"><button class="nav-link" :class="{active: tab==='projects'}" @click="tab='projects'">Projekte</button></li>
+      <li class="nav-item"><button class="nav-link" :class="{active: tab==='activities'}" @click="tab='activities'">Tätigkeiten</button></li>
+    </ul>
+  </div>
+
+  <!-- Zeitbuchungen -->
+  <section v-if="tab==='time'">
+    <h2 class="h4 mb-3">Neue Zeitbuchung</h2>
+    <form @submit.prevent="saveTimeBooking" class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label">Projekt</label>
+        <select v-model.number="timeForm.projectId" class="form-select" required>
+          <option :value="''" disabled>Bitte wählen…</option>
+          <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Tätigkeit (optional)</label>
+        <select v-model.number="timeForm.activityId" class="form-select">
+          <option :value="null">– keine –</option>
+          <option v-for="a in activities" :key="a.id" :value="a.id">{{ a.name }}</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Ticket</label>
+        <input v-model.trim="timeForm.ticketNumber" class="form-control" required>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Start</label>
+        <input v-model="timeForm.startedAtLocal" type="datetime-local" class="form-control" required>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Ende</label>
+        <input v-model="timeForm.endedAtLocal" type="datetime-local" class="form-control" required>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Dauer (min, optional)</label>
+        <input v-model.number="timeForm.durationMinutes" type="number" min="1" class="form-control" placeholder="Auto">
+      </div>
+      <div class="col-md-2">
+        <button type="submit" class="btn btn-primary w-100">{{ timeForm.id ? 'Aktualisieren' : 'Speichern' }}</button>
+      </div>
+      <div class="col-md-2" v-if="timeForm.id">
+        <button type="button" class="btn btn-secondary w-100" @click="resetTimeForm">Abbrechen</button>
+      </div>
+    </form>
+
+    <div v-if="error" class="alert alert-danger mt-3">{{ error }}</div>
+
+    <hr class="my-4">
+    <h2 class="h5">Buchungen</h2>
+    <div class="table-responsive">
+      <table class="table table-striped align-middle">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Projekt</th>
+            <th>Tätigkeit</th>
+            <th>Ticket</th>
+            <th>Start</th>
+            <th>Ende</th>
+            <th>Dauer (min)</th>
+            <th class="text-end">Aktionen</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="tb in timeBookings" :key="tb.id" @click="editTime(tb)" style="cursor:pointer">
+            <td>{{ tb.id }}</td>
+            <td>{{ projectName(tb.projectId) }}</td>
+            <td>{{ activityName(tb.activityId) }}</td>
+            <td>{{ tb.ticketNumber }}</td>
+            <td>{{ formatDateTime(tb.startedAt) }}</td>
+            <td>{{ formatDateTime(tb.endedAt) }}</td>
+            <td>{{ tb.durationMinutes }}</td>
+            <td class="text-end">
+              <button class="btn btn-sm btn-outline-danger" @click.stop="deleteTime(tb)">Löschen</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Kunden -->
+  <section v-if="tab==='customers'">
+    <crud-entity title="Kunden" :columns="[{key:'id',label:'ID'},{key:'name',label:'Name'}]"
+                 :items="customers"
+                 :empty-item="{name:''}"
+                 @refresh="loadCustomers"
+                 create-url="/api/customers"
+                 :update-url="id => `/api/customers/${id}`"
+                 :delete-url="id => `/api/customers/${id}`">
+    </crud-entity>
+  </section>
+
+  <!-- Tätigkeiten -->
+  <section v-if="tab==='activities'">
+    <crud-entity title="Tätigkeiten" :columns="[{key:'id',label:'ID'},{key:'name',label:'Name'}]"
+                 :items="activities"
+                 :empty-item="{name:''}"
+                 @refresh="loadActivities"
+                 create-url="/api/activities"
+                 update-url="(id)=>`/api/activities/${id}`"
+                 delete-url="(id)=>`/api/activities/${id}`">
+    </crud-entity>
+  </section>
+
+  <!-- Projekte -->
+  <section v-if="tab==='projects'">
+    <h2 class="h4 mb-3">Projekte</h2>
+    <form @submit.prevent="saveProject" class="row g-2 align-items-end mb-3">
+      <div class="col-md-3">
+        <label class="form-label">Name</label>
+        <input v-model.trim="projectForm.name" class="form-control" required>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Kunde</label>
+        <select v-model.number="projectForm.customerId" class="form-select" required>
+          <option :value="''" disabled>Bitte wählen…</option>
+          <option v-for="c in customers" :key="c.id" :value="c.id">{{ c.name }}</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Ticket URL</label>
+        <input v-model.trim="projectForm.externalTicketUrl" class="form-control" placeholder="https://…">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Ticket Login</label>
+        <input v-model.trim="projectForm.externalTicketLogin" class="form-control">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Ticket Credentials</label>
+        <input v-model.trim="projectForm.externalTicketCredentials" class="form-control">
+      </div>
+      <div class="col-md-2">
+        <button type="submit" class="btn btn-primary w-100">{{ projectForm.id ? 'Aktualisieren' : 'Speichern' }}</button>
+      </div>
+      <div class="col-md-2" v-if="projectForm.id">
+        <button type="button" class="btn btn-secondary w-100" @click="resetProjectForm">Abbrechen</button>
+      </div>
+    </form>
+
+    <div class="table-responsive">
+      <table class="table table-striped align-middle">
+        <thead>
+        <tr>
+          <th>ID</th><th>Name</th><th>Kunde</th><th>Ticket URL</th><th>Login</th><th>Credentials</th><th class="text-end">Aktionen</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr v-for="p in projects" :key="p.id" @click="editProject(p)" style="cursor:pointer">
+          <td>{{ p.id }}</td>
+          <td>{{ p.name }}</td>
+          <td>{{ customerName(p.customerId) }}</td>
+          <td class="text-truncate" style="max-width:220px">{{ p.externalTicketUrl }}</td>
+          <td>{{ p.externalTicketLogin }}</td>
+          <td class="text-truncate" style="max-width:220px">{{ p.externalTicketCredentials }}</td>
+          <td class="text-end">
+            <button class="btn btn-sm btn-outline-danger" @click.stop="deleteProject(p)">Löschen</button>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script>
+const { createApp, reactive, ref, onMounted, computed } = Vue;
+
+function jsonFetch(url, options = {}) {
+  const opts = Object.assign({
+    credentials: 'same-origin',
+    headers: {'Content-Type': 'application/json', 'X-Requested-With': 'fetch'},
+  }, options);
+  return fetch(url, opts).then(async res => {
+    const text = await res.text();
+    let data;
+    try { data = text ? JSON.parse(text) : null; } catch(e) { data = text; }
+    if (!res.ok) {
+      const msg = (data && data.error) ? data.error : (`HTTP ${res.status}`);
+      throw new Error(msg);
+    }
+    return data;
+  });
+}
+
+createApp({
+  setup() {
+    const tab = ref('time');
+    const error = ref('');
+
+    // shared lists
+    const customers = ref([]);
+    const activities = ref([]);
+    const projects = ref([]);
+
+    // time bookings
+    const timeBookings = ref([]);
+    const timeForm = reactive({ id:null, projectId:'', activityId:null, ticketNumber:'', startedAtLocal:'', endedAtLocal:'', durationMinutes:null });
+
+    function resetTimeForm() {
+      Object.assign(timeForm, { id:null, projectId:'', activityId:null, ticketNumber:'', startedAtLocal:'', endedAtLocal:'', durationMinutes:null });
+    }
+
+    function localToIso(local) {
+      if (!local) return '';
+      // treat local as local time; convert to ISO with timezone offset
+      const dt = new Date(local);
+      return dt.toISOString();
+    }
+
+    function isoToLocal(iso) {
+      if (!iso) return '';
+      const d = new Date(iso);
+      const pad = n => n.toString().padStart(2,'0');
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    function formatDateTime(iso) {
+      try { const d = new Date(iso); return d.toLocaleString(); } catch(e) { return iso; }
+    }
+
+    function projectName(id) { const p = projects.value.find(x=>x.id===id); return p? p.name : id; }
+    function activityName(id) { if(id==null) return ''; const a = activities.value.find(x=>x.id===id); return a? a.name : id; }
+    function customerName(id) { const c = customers.value.find(x=>x.id===id); return c? c.name : id; }
+
+    async function loadCustomers() { customers.value = await jsonFetch('/api/customers'); }
+    async function loadActivities() { activities.value = await jsonFetch('/api/activities'); }
+    async function loadProjects() { projects.value = await jsonFetch('/api/projects'); }
+    async function loadTimeBookings() { timeBookings.value = await jsonFetch('/api/time-bookings'); }
+
+    async function saveTimeBooking() {
+      error.value='';
+      try {
+        const payload = {
+          projectId: Number(timeForm.projectId),
+          activityId: timeForm.activityId === null || timeForm.activityId === '' ? null : Number(timeForm.activityId),
+          ticketNumber: timeForm.ticketNumber,
+          startedAt: localToIso(timeForm.startedAtLocal),
+          endedAt: localToIso(timeForm.endedAtLocal),
+        };
+        if (timeForm.durationMinutes) payload.durationMinutes = Number(timeForm.durationMinutes);
+        if (timeForm.id) {
+          // update
+          const updated = await jsonFetch(`/api/time-bookings/${timeForm.id}`, { method:'PUT', body: JSON.stringify(payload) });
+          const idx = timeBookings.value.findIndex(x=>x.id===updated.id);
+          if (idx>=0) timeBookings.value[idx] = updated; else timeBookings.value.unshift(updated);
+        } else {
+          const created = await jsonFetch('/api/time-bookings', { method:'POST', body: JSON.stringify(payload) });
+          timeBookings.value.unshift(created);
+        }
+        resetTimeForm();
+      } catch(e) { error.value = e.message || String(e); }
+    }
+
+    function editTime(tb) {
+      Object.assign(timeForm, {
+        id: tb.id,
+        projectId: tb.projectId,
+        activityId: tb.activityId ?? null,
+        ticketNumber: tb.ticketNumber,
+        startedAtLocal: isoToLocal(tb.startedAt),
+        endedAtLocal: isoToLocal(tb.endedAt),
+        durationMinutes: tb.durationMinutes,
+      });
+      tab.value = 'time';
+    }
+
+    async function deleteTime(tb) {
+      if (!confirm('Eintrag wirklich löschen?')) return;
+      try {
+        await jsonFetch(`/api/time-bookings/${tb.id}`, { method:'DELETE' });
+        timeBookings.value = timeBookings.value.filter(x=>x.id!==tb.id);
+        if (timeForm.id===tb.id) resetTimeForm();
+      } catch(e) { error.value = e.message || String(e); }
+    }
+
+    // Projects
+    const projectForm = reactive({ id:null, name:'', customerId:'', externalTicketUrl:'', externalTicketLogin:'', externalTicketCredentials:'' });
+    function resetProjectForm(){ Object.assign(projectForm, { id:null, name:'', customerId:'', externalTicketUrl:'', externalTicketLogin:'', externalTicketCredentials:'' }); }
+    function editProject(p){ Object.assign(projectForm, { ...p }); }
+    async function saveProject(){
+      const payload = { name: projectForm.name, customerId: Number(projectForm.customerId), externalTicketUrl: emptyToNull(projectForm.externalTicketUrl), externalTicketLogin: emptyToNull(projectForm.externalTicketLogin), externalTicketCredentials: emptyToNull(projectForm.externalTicketCredentials) };
+      if (projectForm.id) {
+        const updated = await jsonFetch(`/api/projects/${projectForm.id}`, { method:'PUT', body: JSON.stringify(payload) });
+        const idx = projects.value.findIndex(x=>x.id===updated.id);
+        if (idx>=0) projects.value[idx] = updated; else projects.value.unshift(updated);
+      } else {
+        const created = await jsonFetch('/api/projects', { method:'POST', body: JSON.stringify(payload) });
+        projects.value.unshift(created);
+      }
+      resetProjectForm();
+    }
+    async function deleteProject(p){ if(!confirm('Projekt löschen?')) return; await jsonFetch(`/api/projects/${p.id}`, { method:'DELETE' }); projects.value = projects.value.filter(x=>x.id!==p.id); if(projectForm.id===p.id) resetProjectForm(); }
+
+    function emptyToNull(v){ return v===null || v===undefined || v==='' ? null : v; }
+
+    onMounted(async () => {
+      await Promise.all([loadCustomers(), loadActivities()]);
+      await loadProjects();
+      await loadTimeBookings();
+    });
+
+    return { tab, error, customers, activities, projects, timeBookings, timeForm, projectForm,
+      saveTimeBooking, resetTimeForm, formatDateTime, projectName, activityName, customerName,
+      editTime, deleteTime, saveProject, editProject, deleteProject, resetProjectForm };
+  },
+  components: {
+    'crud-entity': {
+      props: ['title','columns','items','emptyItem','createUrl','updateUrl','deleteUrl'],
+      emits: ['refresh'],
+      setup(props, { emit }){
+        const form = reactive({});
+        const editingId = ref(null);
+        const error = ref('');
+        function reset(){ Object.assign(form, JSON.parse(JSON.stringify(props.emptyItem))); editingId.value=null; }
+        onMounted(()=> reset());
+        function startEdit(item){ Object.assign(form, JSON.parse(JSON.stringify(item))); editingId.value = item.id; }
+        async function save(){
+          error.value='';
+          try{
+            const payload = JSON.stringify(form);
+            if (editingId.value){
+              const url = typeof props.updateUrl==='function' ? props.updateUrl(editingId.value) : props.updateUrl;
+              const updated = await jsonFetch(url, { method:'PUT', body: payload });
+            } else {
+              const created = await jsonFetch(props.createUrl, { method:'POST', body: payload });
+            }
+            reset();
+            emit('refresh');
+          } catch(e){ error.value = e.message || String(e); }
+        }
+        async function remove(item){ if(!confirm('Wirklich löschen?')) return; try{ const url = typeof props.deleteUrl==='function' ? props.deleteUrl(item.id) : props.deleteUrl; await jsonFetch(url, { method:'DELETE' }); emit('refresh'); if(editingId.value===item.id) reset(); } catch(e){ error.value = e.message || String(e); } }
+
+        return { form, editingId, error, reset, startEdit, save, remove };
+      },
+      template: `
+      <div>
+        <h2 class="h4 mb-3">{{ title }}</h2>
+        <form @submit.prevent="save" class="row g-2 align-items-end mb-3">
+          <template v-for="col in columns" :key="col.key">
+            <div v-if="col.key!=='id'" class="col-md-3">
+              <label class="form-label">{{ col.label }}</label>
+              <input v-model.trim="form[col.key]" class="form-control">
+            </div>
+          </template>
+          <div class="col-md-2">
+            <button type="submit" class="btn btn-primary w-100">{{ editingId ? 'Aktualisieren' : 'Anlegen' }}</button>
+          </div>
+          <div class="col-md-2" v-if="editingId">
+            <button type="button" class="btn btn-secondary w-100" @click="reset">Abbrechen</button>
+          </div>
+        </form>
+        <div v-if="error" class="alert alert-danger">{{ error }}</div>
+        <div class="table-responsive">
+          <table class="table table-striped align-middle">
+            <thead>
+              <tr>
+                <th v-for="col in columns" :key="col.key">{{ col.label }}</th>
+                <th class="text-end">Aktionen</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in items" :key="item.id" @click="startEdit(item)" style="cursor:pointer">
+                <td v-for="col in columns" :key="col.key">{{ item[col.key] }}</td>
+                <td class="text-end">
+                  <button class="btn btn-sm btn-outline-danger" @click.stop="remove(item)">Löschen</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      `
+    }
+  }
+}).mount('#app');
+</script>
+{% endblock %}

@@ -19,13 +19,15 @@ security:
                 login_path: app_login
                 check_path: app_login
                 enable_csrf: true
-                default_target_path: app_profile
+                default_target_path: app_frontend
             logout:
                 path: app_logout
                 target: app_login
 
     access_control:
         - { path: ^/login$, roles: PUBLIC_ACCESS }
+        - { path: ^/api, roles: ROLE_USER }
+        - { path: ^/app$, roles: ROLE_USER }
         - { path: ^/profile, roles: ROLE_USER }
 
 when@test:

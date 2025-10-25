@@ -19,7 +19,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[Route('/api', name: 'api_')]
+#[Route('/legacy-api', name: 'legacy_api_')]
 class ManagementController extends AbstractController
 {
     #[Route('/customers', name: 'create_customer', methods: ['POST'])]
