@@ -1,0 +1,73 @@
+# General
+app.brand: "Symfony App"
+app.logged_in_as: "Eingeloggt als %user%"
+app.login: "Login"
+app.logout: "Logout"
+
+# Login
+login.title: "Login"
+login.email: "E-Mail"
+login.password: "Passwort"
+login.submit: "Einloggen"
+
+# Tabs
+tabs.time: "Zeitbuchungen"
+tabs.customers: "Kunden"
+tabs.projects: "Projekte"
+tabs.activities: "Tätigkeiten"
+
+# Headings
+headings.new_time_booking: "Neue Zeitbuchung"
+headings.bookings: "Buchungen"
+headings.projects: "Projekte"
+
+# Fields
+fields.project: "Projekt"
+fields.activity_optional: "Tätigkeit (optional)"
+fields.ticket: "Ticket"
+fields.start: "Start"
+fields.end: "Ende"
+fields.duration_optional: "Dauer (min, optional)"
+fields.name: "Name"
+fields.customer: "Kunde"
+fields.ticket_url: "Ticket URL"
+fields.ticket_login: "Ticket Login"
+fields.ticket_credentials: "Ticket Credentials"
+
+# Buttons
+buttons.save: "Speichern"
+buttons.update: "Aktualisieren"
+buttons.cancel: "Abbrechen"
+buttons.delete: "Löschen"
+buttons.create: "Anlegen"
+
+# Table headers
+table.id: "ID"
+table.project: "Projekt"
+table.activity: "Tätigkeit"
+table.ticket: "Ticket"
+table.start: "Start"
+table.end: "Ende"
+table.duration_min: "Dauer (min)"
+table.actions: "Aktionen"
+
+# Confirmations
+confirm.delete_entry: "Eintrag wirklich löschen?"
+confirm.delete_project: "Projekt löschen?"
+
+# CRUD titles
+crud.customers: "Kunden"
+crud.activities: "Tätigkeiten"
+
+# App
+app.title: "Zeiterfassung"
+
+# Common
+common.please_select: "Bitte wählen…"
+common.none: "– keine –"
+
+# Errors (generic)
+errors.unexpected: "Unerwarteter Fehler. Bitte versuchen Sie es später erneut."
+errors.invalid_input: "Ungültige Eingabe."
+errors.invalid_input_generic: "Ungültige Eingabe. Bitte prüfen Sie die übermittelten Daten."
+errors.not_found: "Ressource wurde nicht gefunden."

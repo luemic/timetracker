@@ -8,6 +8,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\HttpKernel\KernelEvents;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * Converts exceptions to JSON errors for API/Fetch requests so the frontend sees meaningful messages
@@ -15,6 +16,8 @@ use Symfony\Component\HttpKernel\KernelEvents;
  */
 class ApiExceptionSubscriber implements EventSubscriberInterface
 {
+    public function __construct(private readonly TranslatorInterface $translator) {}
+
     public static function getSubscribedEvents(): array
     {
         return [
@@ -33,7 +36,7 @@ class ApiExceptionSubscriber implements EventSubscriberInterface
 
         // Default status code and message
         $status = 500;
-        $message = 'Unerwarteter Fehler. Bitte versuchen Sie es später erneut.';
+        $message = $this->translator->trans('errors.unexpected');
 
         // Map common exception types to appropriate status codes with meaningful messages
         if ($throwable instanceof HttpExceptionInterface) {
@@ -41,15 +44,15 @@ class ApiExceptionSubscriber implements EventSubscriberInterface
             $message = $throwable->getMessage() ?: $message;
         } elseif ($throwable instanceof \InvalidArgumentException) {
             $status = 400;
-            $message = $throwable->getMessage() ?: 'Ungültige Eingabe.';
+            $message = $throwable->getMessage() ?: $this->translator->trans('errors.invalid_input');
         } elseif ($throwable instanceof \TypeError || $throwable instanceof \ValueError) {
             // PHP engine type/value errors during request processing (e.g., invalid date inputs)
             $status = 400;
-            $message = 'Ungültige Eingabe. Bitte prüfen Sie die übermittelten Daten.';
+            $message = $this->translator->trans('errors.invalid_input_generic');
         } elseif ($throwable instanceof \RuntimeException) {
             // Often used for not found / invalid references in services
             $status = 404;
-            $message = $throwable->getMessage() ?: 'Ressource wurde nicht gefunden.';
+            $message = $throwable->getMessage() ?: $this->translator->trans('errors.not_found');
         }
 
         // In debug env, enrich the payload a bit (without full traces) to help development
