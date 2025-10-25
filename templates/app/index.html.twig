@@ -178,7 +178,7 @@
 
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script>
-const { createApp, reactive, ref, onMounted, computed } = Vue;
+const { createApp, reactive, ref, onMounted, computed, watch } = Vue;
 
 function jsonFetch(url, options = {}) {
   const opts = Object.assign({
@@ -307,6 +307,52 @@ createApp({
     async function deleteProject(p){ if(!confirm('Projekt löschen?')) return; await jsonFetch(`/api/projects/${p.id}`, { method:'DELETE' }); projects.value = projects.value.filter(x=>x.id!==p.id); if(projectForm.id===p.id) resetProjectForm(); }
 
     function emptyToNull(v){ return v===null || v===undefined || v==='' ? null : v; }
+
+    // Helpers for datetime-local strings
+    function toLocalInputValue(d) {
+      const pad = n => n.toString().padStart(2,'0');
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+    function parseLocalInputValue(s) {
+      // s like YYYY-MM-DDTHH:MM
+      if (!s) return null;
+      const d = new Date(s);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    function addMinutes(date, minutes) {
+      return new Date(date.getTime() + minutes*60000);
+    }
+
+    // Auto-sync rules between startedAtLocal (von) and endedAtLocal (bis)
+    watch(() => timeForm.startedAtLocal, (newVal, oldVal) => {
+      const start = parseLocalInputValue(newVal);
+      if (!start) return;
+      const end = parseLocalInputValue(timeForm.endedAtLocal);
+      if (!end) {
+        // If end is empty, set to start + 15 minutes
+        timeForm.endedAtLocal = toLocalInputValue(addMinutes(start, 15));
+        return;
+      }
+      // Ensure end is not before start; if it is, move end to start + 15
+      if (end.getTime() < start.getTime()) {
+        timeForm.endedAtLocal = toLocalInputValue(addMinutes(start, 15));
+      }
+    });
+
+    watch(() => timeForm.endedAtLocal, (newVal, oldVal) => {
+      const end = parseLocalInputValue(newVal);
+      if (!end) return;
+      const start = parseLocalInputValue(timeForm.startedAtLocal);
+      if (!start) {
+        // If start is empty, set to end - 15 minutes
+        timeForm.startedAtLocal = toLocalInputValue(addMinutes(end, -15));
+        return;
+      }
+      // If end is before start, adjust start to end - 15 to keep at least 0 interval and follow UX rule
+      if (end.getTime() < start.getTime()) {
+        timeForm.startedAtLocal = toLocalInputValue(addMinutes(end, -15));
+      }
+    });
 
     onMounted(async () => {
       await Promise.all([loadCustomers(), loadActivities()]);

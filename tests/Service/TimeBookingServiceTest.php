@@ -213,6 +213,42 @@ class TimeBookingServiceTest extends TestCase
         $svc->update(1, ['ticketNumber'=>'   ']);
     }
 
+    public function testUpdateRejectsEndedBeforeStartedWhenOnlyEndedChanges(): void
+    {
+        $p = new Project(); $this->setId($p, 1);
+        $tb = (new TimeBooking())
+            ->setProject($p)
+            ->setStartedAt(new \DateTimeImmutable('2024-01-01T10:00:00+00:00'))
+            ->setEndedAt(new \DateTimeImmutable('2024-01-01T11:00:00+00:00'))
+            ->setTicketNumber('T')
+            ->setDurationMinutes(60);
+        $tbRepo = $this->createMock(TimeBookingRepository::class);
+        $tbRepo->method('find')->with(1)->willReturn($tb);
+        $svc = $this->makeService($tbRepo);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('endedAt must be after startedAt');
+        $svc->update(1, ['endedAt'=>'2024-01-01T09:59:00+00:00']);
+    }
+
+    public function testUpdateRejectsStartedAfterEndedWhenOnlyStartedChanges(): void
+    {
+        $p = new Project(); $this->setId($p, 1);
+        $tb = (new TimeBooking())
+            ->setProject($p)
+            ->setStartedAt(new \DateTimeImmutable('2024-01-01T10:00:00+00:00'))
+            ->setEndedAt(new \DateTimeImmutable('2024-01-01T11:00:00+00:00'))
+            ->setTicketNumber('T')
+            ->setDurationMinutes(60);
+        $tbRepo = $this->createMock(TimeBookingRepository::class);
+        $tbRepo->method('find')->with(1)->willReturn($tb);
+        $svc = $this->makeService($tbRepo);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('endedAt must be after startedAt');
+        $svc->update(1, ['startedAt'=>'2024-01-01T11:00:01+00:00']);
+    }
+
     public function testDeleteBehavior(): void
     {
         $repo = $this->createMock(TimeBookingRepository::class);

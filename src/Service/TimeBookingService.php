@@ -149,6 +149,10 @@ class TimeBookingService
         if (array_key_exists('endedAt', $data)) {
             $timeBooking->setEndedAt(new DateTimeImmutable((string)$data['endedAt']));
         }
+        // Validate time order: endedAt must be strictly after startedAt
+        if ($timeBooking->getEndedAt() <= $timeBooking->getStartedAt()) {
+            throw new \InvalidArgumentException('endedAt must be after startedAt');
+        }
         if (array_key_exists('ticketNumber', $data)) {
             $ticket = trim((string)$data['ticketNumber']);
             if ($ticket === '') { throw new \InvalidArgumentException('ticketNumber must not be empty'); }
