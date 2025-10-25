@@ -198,14 +198,27 @@ class ManagementController extends AbstractController
             return $this->json(['error' => 'durationMinutes must be > 0'], 400);
         }
 
+        // Prevent overlapping bookings for the current user on the same project
+        $currentUser = $this->getUser();
+        if ($currentUser !== null && !($currentUser instanceof \App\Entity\User)) {
+            return $this->json(['error' => 'Benutzerkontext ungültig: Bitte melden Sie sich erneut an.'], 400);
+        }
+        if ($currentUser instanceof \App\Entity\User) {
+            if ($timeBookings->existsOverlap($currentUser, $project, $startedAt, $endedAt, null)) {
+                return $this->json(['error' => 'Zeitüberschneidung: Der Zeitraum überlappt mit einer bestehenden Buchung (gleiches Projekt, gleicher Benutzer).'], 400);
+            }
+        }
+
         $tb = (new TimeBooking())
             ->setProject($project)
             ->setActivity($activity)
             ->setTicketNumber($ticketNumber)
             ->setStartedAt($startedAt)
             ->setEndedAt($endedAt)
-            ->setDurationMinutes($durationMinutes)
-            ->setUser($this->getUser());
+            ->setDurationMinutes($durationMinutes);
+        if ($currentUser instanceof \App\Entity\User) {
+            $tb->setUser($currentUser);
+        }
 
         $timeBookings->save($tb, true);
 

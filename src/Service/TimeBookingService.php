@@ -3,6 +3,7 @@
 namespace App\Service;
 
 use App\Entity\TimeBooking;
+use App\Entity\User;
 use App\Repository\ActivityRepository;
 use App\Repository\ProjectRepository;
 use App\Repository\TimeBookingRepository;
@@ -34,7 +35,7 @@ class TimeBookingService
         // Sort by start time ("von") descending: newest first; add id DESC for stable ordering
         $orderBy = ['startedAt' => 'DESC', 'id' => 'DESC'];
         $user = $this->security?->getUser();
-        if ($user) {
+        if ($user instanceof User) {
             $criteria['user'] = $user;
         }
         $items = $this->timeBookings->findBy($criteria, $orderBy);
@@ -45,7 +46,10 @@ class TimeBookingService
     public function get(int $id): ?array
     {
         $user = $this->security?->getUser();
-        $timeBooking = $user
+        if ($user !== null && !$user instanceof User) {
+            throw new \InvalidArgumentException('Benutzerkontext ungültig: Bitte melden Sie sich erneut an.');
+        }
+        $timeBooking = $user instanceof User
             ? $this->timeBookings->findOneBy(['id' => $id, 'user' => $user])
             : $this->timeBookings->find($id);
         if ($timeBooking) {
@@ -87,9 +91,13 @@ class TimeBookingService
         }
         try {
             $started = new DateTimeImmutable($startedAtStr);
+        } catch (\Throwable $exception) {
+            throw new \InvalidArgumentException('Ungültiges Datumsformat für "startedAt". Erwartet ISO 8601, z. B. 2025-10-25T12:00:00Z oder 2025-10-25T12:00:00+02:00.');
+        }
+        try {
             $ended = new DateTimeImmutable($endedAtStr);
-        } catch (\Exception) {
-            throw new \InvalidArgumentException('Invalid date format for startedAt/endedAt');
+        } catch (\Throwable $exception) {
+            throw new \InvalidArgumentException('Ungültiges Datumsformat für "endedAt". Erwartet ISO 8601, z. B. 2025-10-25T12:15:00Z oder 2025-10-25T12:15:00+02:00.');
         }
         if ($ended <= $started) { throw new \InvalidArgumentException('endedAt must be after startedAt'); }
         $minutes = (int)($data['durationMinutes'] ?? 0);
@@ -97,6 +105,18 @@ class TimeBookingService
             $minutes = (int) round(($ended->getTimestamp() - $started->getTimestamp()) / 60);
             if ($minutes <= 0) { throw new \InvalidArgumentException('durationMinutes must be > 0'); }
         }
+
+        // Prevent overlapping bookings for same user and project
+        $user = $this->security?->getUser();
+        if ($user !== null && !$user instanceof User) {
+            throw new \InvalidArgumentException('Benutzerkontext ungültig: Bitte melden Sie sich erneut an.');
+        }
+        if ($user instanceof User) {
+            if ($this->timeBookings->existsOverlap($user, $project, $started, $ended, null)) {
+                throw new \InvalidArgumentException('Zeitüberschneidung: Der Zeitraum überlappt mit einer bestehenden Buchung (gleiches Projekt, gleicher Benutzer).');
+            }
+        }
+
         $timeBooking = (new TimeBooking())
             ->setProject($project)
             ->setActivity($activity)
@@ -104,9 +124,7 @@ class TimeBookingService
             ->setEndedAt($ended)
             ->setTicketNumber($ticketNumber)
             ->setDurationMinutes($minutes);
-        $user = $this->security?->getUser();
-        if ($user) {
-            // @phpstan-ignore-next-line - domain user implements UserInterface
+        if ($user instanceof User) {
             $timeBooking->setUser($user);
         }
         $this->timeBookings->save($timeBooking, true);
@@ -122,7 +140,10 @@ class TimeBookingService
     public function update(int $id, array $data): ?array
     {
         $user = $this->security?->getUser();
-        $timeBooking = $user
+        if ($user !== null && !$user instanceof User) {
+            throw new \InvalidArgumentException('Benutzerkontext ungültig: Bitte melden Sie sich erneut an.');
+        }
+        $timeBooking = $user instanceof User
             ? $this->timeBookings->findOneBy(['id' => $id, 'user' => $user])
             : $this->timeBookings->find($id);
         if (!$timeBooking) return null;
@@ -144,15 +165,33 @@ class TimeBookingService
                 $timeBooking->setActivity($activity);
             }
         }
+        // Parse and apply provided datetimes with validation
         if (array_key_exists('startedAt', $data)) {
-            $timeBooking->setStartedAt(new DateTimeImmutable((string)$data['startedAt']));
+            try {
+                $timeBooking->setStartedAt(new DateTimeImmutable((string)$data['startedAt']));
+            } catch (\Throwable $exception) {
+                throw new \InvalidArgumentException('Ungültiges Datumsformat für "startedAt". Erwartet ISO 8601, z. B. 2025-10-25T12:00:00Z oder 2025-10-25T12:00:00+02:00.');
+            }
         }
         if (array_key_exists('endedAt', $data)) {
-            $timeBooking->setEndedAt(new DateTimeImmutable((string)$data['endedAt']));
+            try {
+                $timeBooking->setEndedAt(new DateTimeImmutable((string)$data['endedAt']));
+            } catch (\Throwable $exception) {
+                throw new \InvalidArgumentException('Ungültiges Datumsformat für "endedAt". Erwartet ISO 8601, z. B. 2025-10-25T12:15:00Z oder 2025-10-25T12:15:00+02:00.');
+            }
         }
         // Validate time order: endedAt must be strictly after startedAt
         if ($timeBooking->getEndedAt() <= $timeBooking->getStartedAt()) {
             throw new \InvalidArgumentException('endedAt must be after startedAt');
+        }
+        // Prevent overlapping with other bookings of same user & project
+        if ($user) {
+            $projectForCheck = $timeBooking->getProject();
+            $startedForCheck = $timeBooking->getStartedAt();
+            $endedForCheck = $timeBooking->getEndedAt();
+            if ($projectForCheck && $this->timeBookings->existsOverlap($user, $projectForCheck, $startedForCheck, $endedForCheck, $timeBooking->getId())) {
+                throw new \InvalidArgumentException('Zeitüberschneidung: Der Zeitraum überlappt mit einer bestehenden Buchung (gleiches Projekt, gleicher Benutzer).');
+            }
         }
         if (array_key_exists('ticketNumber', $data)) {
             $ticket = trim((string)$data['ticketNumber']);
@@ -172,7 +211,10 @@ class TimeBookingService
     public function delete(int $id): bool
     {
         $user = $this->security?->getUser();
-        $timeBooking = $user
+        if ($user !== null && !$user instanceof User) {
+            throw new \InvalidArgumentException('Benutzerkontext ungültig: Bitte melden Sie sich erneut an.');
+        }
+        $timeBooking = $user instanceof User
             ? $this->timeBookings->findOneBy(['id' => $id, 'user' => $user])
             : $this->timeBookings->find($id);
         if (!$timeBooking) return false;

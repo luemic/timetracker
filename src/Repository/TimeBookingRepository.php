@@ -2,7 +2,10 @@
 
 namespace App\Repository;
 
+use App\Entity\Project;
 use App\Entity\TimeBooking;
+use App\Entity\User;
+use DateTimeImmutable;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -44,5 +47,28 @@ class TimeBookingRepository extends ServiceEntityRepository
         if ($flush) {
             $em->flush();
         }
+    }
+
+    /**
+     * Check if an overlapping time booking exists for a given user and project.
+     * Two intervals [start, end) overlap if existing.startedAt < :end AND existing.endedAt > :start.
+     */
+    public function existsOverlap(User $user, Project $project, DateTimeImmutable $start, DateTimeImmutable $end, ?int $excludeId = null): bool
+    {
+        $qb = $this->createQueryBuilder('tb')
+            ->select('1')
+            ->where('tb.user = :user')
+            ->andWhere('tb.project = :project')
+            ->andWhere('tb.startedAt < :end')
+            ->andWhere('tb.endedAt > :start')
+            ->setMaxResults(1)
+            ->setParameter('user', $user)
+            ->setParameter('project', $project)
+            ->setParameter('start', $start)
+            ->setParameter('end', $end);
+        if ($excludeId !== null) {
+            $qb->andWhere('tb.id <> :excludeId')->setParameter('excludeId', $excludeId);
+        }
+        return (bool) $qb->getQuery()->getOneOrNullResult();
     }
 }

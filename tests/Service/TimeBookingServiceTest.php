@@ -7,12 +7,14 @@ namespace App\Tests\Service;
 use App\Entity\Activity;
 use App\Entity\Project;
 use App\Entity\TimeBooking;
+use App\Entity\User;
 use App\Repository\ActivityRepository;
 use App\Repository\ProjectRepository;
 use App\Repository\TimeBookingRepository;
 use App\Service\TimeBookingService;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
+use Symfony\Bundle\SecurityBundle\Security;
 
 class TimeBookingServiceTest extends TestCase
 {
@@ -21,12 +23,13 @@ class TimeBookingServiceTest extends TestCase
         ProjectRepository $projRepo = null,
         ActivityRepository $actRepo = null,
         EntityManagerInterface $em = null,
+        Security $security = null,
     ): TimeBookingService {
         $tbRepo ??= $this->createMock(TimeBookingRepository::class);
         $projRepo ??= $this->createMock(ProjectRepository::class);
         $actRepo ??= $this->createMock(ActivityRepository::class);
         $em ??= $this->createMock(EntityManagerInterface::class);
-        return new TimeBookingService($tbRepo, $projRepo, $actRepo, $em);
+        return new TimeBookingService($tbRepo, $projRepo, $actRepo, $em, $security);
     }
 
     public function testListMapsEntities(): void
@@ -116,6 +119,32 @@ class TimeBookingServiceTest extends TestCase
         $svc = $this->makeService(null, $projects);
         $this->expectException(\InvalidArgumentException::class);
         $svc->create(['projectId'=>1,'ticketNumber'=>'T','startedAt'=>'bad','endedAt'=>'also-bad']);
+    }
+
+    public function testCreateRejectsOverlap(): void
+    {
+        // Arrange
+        $p = new Project(); $this->setId($p, 1);
+        $projects = $this->createMock(ProjectRepository::class);
+        $projects->method('find')->with(1)->willReturn($p);
+        $tbRepo = $this->createMock(TimeBookingRepository::class);
+        $security = $this->createMock(Security::class);
+        $user = new User();
+        $security->method('getUser')->willReturn($user);
+        $tbRepo->method('existsOverlap')->willReturn(true);
+        $svc = $this->makeService($tbRepo, $projects, null, null, $security);
+
+        // Assert
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Zeitüberschneidung: Der Zeitraum überlappt mit einer bestehenden Buchung (gleiches Projekt, gleicher Benutzer).');
+
+        // Act
+        $svc->create([
+            'projectId'=>1,
+            'ticketNumber'=>'T-OL',
+            'startedAt'=>'2024-01-01T10:00:00+00:00',
+            'endedAt'=>'2024-01-01T11:00:00+00:00',
+        ]);
     }
 
     public function testCreateRejectsEndedBeforeStarted(): void
@@ -247,6 +276,34 @@ class TimeBookingServiceTest extends TestCase
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('endedAt must be after startedAt');
         $svc->update(1, ['startedAt'=>'2024-01-01T11:00:01+00:00']);
+    }
+
+    public function testUpdateRejectsOverlap(): void
+    {
+        $p = new Project(); $this->setId($p, 1);
+        $tb = (new TimeBooking())
+            ->setProject($p)
+            ->setStartedAt(new \DateTimeImmutable('2024-01-01T10:00:00+00:00'))
+            ->setEndedAt(new \DateTimeImmutable('2024-01-01T11:00:00+00:00'))
+            ->setTicketNumber('T')
+            ->setDurationMinutes(60);
+        $this->setId($tb, 42);
+        $tbRepo = $this->createMock(TimeBookingRepository::class);
+        // When user is present, service uses findOneBy with id+user; but mocking the method call directly is complex,
+        // we can bypass by not relying on that path: instead, provide Security and make findOneBy return the entity.
+        $tbRepo->method('findOneBy')->willReturn($tb);
+        $tbRepo->method('existsOverlap')->willReturn(true);
+        $security = $this->createMock(Security::class);
+        $user = new User();
+        $security->method('getUser')->willReturn($user);
+
+        $svc = $this->makeService($tbRepo, null, null, null, $security);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Zeitüberschneidung: Der Zeitraum überlappt mit einer bestehenden Buchung (gleiches Projekt, gleicher Benutzer).');
+        $svc->update(42, [
+            // no field changes required; service will check with current values
+        ]);
     }
 
     public function testDeleteBehavior(): void
