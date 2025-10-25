@@ -25,14 +25,44 @@ class ProjectActivity
     #[ORM\Column(type: 'float')]
     private float $factor = 1.0;
 
-    public function getId(): ?int { return $this->id; }
+    public function getId(): ?int
+    {
+        return $this->id;
+    }
 
-    public function getProject(): ?Project { return $this->project; }
-    public function setProject(?Project $project): self { $this->project = $project; return $this; }
+    public function getProject(): ?Project
+    {
+        return $this->project;
+    }
 
-    public function getActivity(): ?Activity { return $this->activity; }
-    public function setActivity(?Activity $activity): self { $this->activity = $activity; return $this; }
+    public function setProject(?Project $project): self
+    {
+        $this->project = $project;
 
-    public function getFactor(): float { return $this->factor; }
-    public function setFactor(float $factor): self { $this->factor = $factor; return $this; }
+        return $this;
+    }
+
+    public function getActivity(): ?Activity
+    {
+        return $this->activity;
+    }
+
+    public function setActivity(?Activity $activity): self
+    {
+        $this->activity = $activity;
+
+        return $this;
+    }
+
+    public function getFactor(): float
+    {
+        return $this->factor;
+    }
+
+    public function setFactor(float $factor): self
+    {
+        $this->factor = $factor;
+
+        return $this;
+    }
 }

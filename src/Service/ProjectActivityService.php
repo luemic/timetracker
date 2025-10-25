@@ -8,6 +8,9 @@ use App\Repository\ProjectActivityRepository;
 use App\Repository\ProjectRepository;
 use Doctrine\ORM\EntityManagerInterface;
 
+/**
+ * Application service for managing the relation between projects and activities.
+ */
 class ProjectActivityService
 {
     public function __construct(
@@ -17,20 +20,30 @@ class ProjectActivityService
         private readonly EntityManagerInterface $em,
     ) {}
 
-    /** @return array<int, array{id:int,projectId:int,activityId:int,factor:float}> */
+    /**
+     * Return all project-activity links sorted by ID ascending.
+     *
+     * @return array<int, array{id:int,projectId:int,activityId:int,factor:float}>
+     */
     public function list(): array
     {
         $items = $this->projectActivities->findBy([], ['id' => 'ASC']);
-        return array_map(fn(ProjectActivity $pa) => $this->toArray($pa), $items);
+        return array_map(fn(ProjectActivity $projectActivity) => $this->toArray($projectActivity), $items);
     }
 
+    /** Get a project-activity link by ID. */
     public function get(int $id): ?array
     {
-        $pa = $this->projectActivities->find($id);
-        return $pa ? $this->toArray($pa) : null;
+        $projectActivity = $this->projectActivities->find($id);
+        return $projectActivity ? $this->toArray($projectActivity) : null;
     }
 
-    /** @param array{projectId?:int,activityId?:int,factor?:float} $data */
+    /**
+     * Create a project-activity link (upserts when pair exists).
+     *
+     * @param array{projectId?:int,activityId?:int,factor?:float} $data
+     * @return array{id:int,projectId:int,activityId:int,factor:float}
+     */
     public function create(array $data): array
     {
         $projectId = $data['projectId'] ?? null;
@@ -50,55 +63,66 @@ class ProjectActivityService
             $this->em->flush();
             return $this->toArray($existing);
         }
-        $pa = (new ProjectActivity())
+        $projectActivity = (new ProjectActivity())
             ->setProject($project)
             ->setActivity($activity)
             ->setFactor($factor);
-        $this->projectActivities->save($pa, true);
-        return $this->toArray($pa);
+        $this->projectActivities->save($projectActivity, true);
+        return $this->toArray($projectActivity);
     }
 
-    /** @param array{projectId?:int,activityId?:int,factor?:float} $data */
+    /**
+     * Update a project-activity link with partial data.
+     *
+     * @param array{projectId?:int,activityId?:int,factor?:float} $data
+     * @return array{id:int,projectId:int,activityId:int,factor:float}|null
+     */
     public function update(int $id, array $data): ?array
     {
-        $pa = $this->projectActivities->find($id);
-        if (!$pa) return null;
+        $projectActivity = $this->projectActivities->find($id);
+        if (!$projectActivity) return null;
         if (array_key_exists('projectId', $data)) {
-            $pid = $data['projectId'];
-            if (!is_numeric($pid)) { throw new \InvalidArgumentException('projectId must be numeric'); }
-            $project = $this->projects->find((int)$pid);
+            $projectId = $data['projectId'];
+            if (!is_numeric($projectId)) { throw new \InvalidArgumentException('projectId must be numeric'); }
+            $project = $this->projects->find((int)$projectId);
             if (!$project) { throw new \RuntimeException('Project not found'); }
-            $pa->setProject($project);
+            $projectActivity->setProject($project);
         }
         if (array_key_exists('activityId', $data)) {
-            $aid = $data['activityId'];
-            if (!is_numeric($aid)) { throw new \InvalidArgumentException('activityId must be numeric'); }
-            $activity = $this->activities->find((int)$aid);
+            $activityId = $data['activityId'];
+            if (!is_numeric($activityId)) { throw new \InvalidArgumentException('activityId must be numeric'); }
+            $activity = $this->activities->find((int)$activityId);
             if (!$activity) { throw new \RuntimeException('Activity not found'); }
-            $pa->setActivity($activity);
+            $projectActivity->setActivity($activity);
         }
         if (array_key_exists('factor', $data)) {
-            $pa->setFactor((float)$data['factor']);
+            $projectActivity->setFactor((float)$data['factor']);
         }
         $this->em->flush();
-        return $this->toArray($pa);
+        return $this->toArray($projectActivity);
     }
 
+    /** Delete a project-activity link. */
     public function delete(int $id): bool
     {
-        $pa = $this->projectActivities->find($id);
-        if (!$pa) return false;
-        $this->projectActivities->remove($pa, true);
+        $projectActivity = $this->projectActivities->find($id);
+        if (!$projectActivity) return false;
+        $this->projectActivities->remove($projectActivity, true);
         return true;
     }
 
-    private function toArray(ProjectActivity $pa): array
+    /**
+     * Map a ProjectActivity entity to array for JSON output.
+     *
+     * @return array{id:int,projectId:int,activityId:int,factor:float}
+     */
+    private function toArray(ProjectActivity $projectActivity): array
     {
         return [
-            'id' => $pa->getId() ?? 0,
-            'projectId' => $pa->getProject()?->getId() ?? 0,
-            'activityId' => $pa->getActivity()?->getId() ?? 0,
-            'factor' => $pa->getFactor(),
+            'id' => $projectActivity->getId() ?? 0,
+            'projectId' => $projectActivity->getProject()?->getId() ?? 0,
+            'activityId' => $projectActivity->getActivity()?->getId() ?? 0,
+            'factor' => $projectActivity->getFactor(),
         ];
     }
 }

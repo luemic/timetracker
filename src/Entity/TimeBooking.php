@@ -33,23 +33,80 @@ class TimeBooking
     #[ORM\Column(type: 'integer')]
     private int $durationMinutes = 0;
 
-    public function getId(): ?int { return $this->id; }
+    public function getId(): ?int
+    {
+        return $this->id;
+    }
 
-    public function getProject(): ?Project { return $this->project; }
-    public function setProject(?Project $project): self { $this->project = $project; return $this; }
+    public function getProject(): ?Project
+    {
+        return $this->project;
+    }
 
-    public function getActivity(): ?Activity { return $this->activity; }
-    public function setActivity(?Activity $activity): self { $this->activity = $activity; return $this; }
+    public function setProject(?Project $project): self
+    {
+        $this->project = $project;
 
-    public function getStartedAt(): \DateTimeImmutable { return $this->startedAt; }
-    public function setStartedAt(\DateTimeImmutable $startedAt): self { $this->startedAt = $startedAt; return $this; }
+        return $this;
+    }
 
-    public function getEndedAt(): \DateTimeImmutable { return $this->endedAt; }
-    public function setEndedAt(\DateTimeImmutable $endedAt): self { $this->endedAt = $endedAt; return $this; }
+    public function getActivity(): ?Activity
+    {
+        return $this->activity;
+    }
 
-    public function getTicketNumber(): string { return $this->ticketNumber; }
-    public function setTicketNumber(string $ticketNumber): self { $this->ticketNumber = $ticketNumber; return $this; }
+    public function setActivity(?Activity $activity): self
+    {
+        $this->activity = $activity;
 
-    public function getDurationMinutes(): int { return $this->durationMinutes; }
-    public function setDurationMinutes(int $minutes): self { $this->durationMinutes = $minutes; return $this; }
+        return $this;
+    }
+
+    public function getStartedAt(): \DateTimeImmutable
+    {
+        return $this->startedAt;
+    }
+
+    public function setStartedAt(\DateTimeImmutable $startedAt): self
+    {
+        $this->startedAt = $startedAt;
+
+        return $this;
+    }
+
+    public function getEndedAt(): \DateTimeImmutable
+    {
+        return $this->endedAt;
+    }
+
+    public function setEndedAt(\DateTimeImmutable $endedAt): self
+    {
+        $this->endedAt = $endedAt;
+
+        return $this;
+    }
+
+    public function getTicketNumber(): string
+    {
+        return $this->ticketNumber;
+    }
+
+    public function setTicketNumber(string $ticketNumber): self
+    {
+        $this->ticketNumber = $ticketNumber;
+
+        return $this;
+    }
+
+    public function getDurationMinutes(): int
+    {
+        return $this->durationMinutes;
+    }
+
+    public function setDurationMinutes(int $minutes): self
+    {
+        $this->durationMinutes = $minutes;
+
+        return $this;
+    }
 }

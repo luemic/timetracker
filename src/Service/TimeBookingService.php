@@ -9,6 +9,9 @@ use App\Repository\TimeBookingRepository;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 
+/**
+ * Application service for managing time bookings.
+ */
 class TimeBookingService
 {
     public function __construct(
@@ -18,20 +21,31 @@ class TimeBookingService
         private readonly EntityManagerInterface $em,
     ) {}
 
-    /** @return array<int, array<string,mixed>> */
+    /**
+     * Return all time bookings sorted by ID ascending.
+     *
+     * @return array<int, array<string,mixed>>
+     */
     public function list(): array
     {
         $items = $this->timeBookings->findBy([], ['id' => 'ASC']);
-        return array_map(fn(TimeBooking $tb) => $this->toArray($tb), $items);
+        return array_map(fn(TimeBooking $timeBooking) => $this->toArray($timeBooking), $items);
     }
 
+    /** Get a time booking by ID, mapped for JSON. */
     public function get(int $id): ?array
     {
-        $tb = $this->timeBookings->find($id);
-        return $tb ? $this->toArray($tb) : null;
+        $timeBooking = $this->timeBookings->find($id);
+        if ($timeBooking) {
+            return $this->toArray($timeBooking);
+        }
+
+        return null;
     }
 
     /**
+     * Create a time booking from request data.
+     *
      * @param array{
      *  projectId?:int,
      *  activityId?:int|null,
@@ -40,6 +54,7 @@ class TimeBookingService
      *  ticketNumber?:string,
      *  durationMinutes?:int|null
      * } $data
+     * @return array<string,mixed>
      */
     public function create(array $data): array
     {
@@ -70,78 +85,89 @@ class TimeBookingService
             $minutes = (int) round(($ended->getTimestamp() - $started->getTimestamp()) / 60);
             if ($minutes <= 0) { throw new \InvalidArgumentException('durationMinutes must be > 0'); }
         }
-        $tb = (new TimeBooking())
+        $timeBooking = (new TimeBooking())
             ->setProject($project)
             ->setActivity($activity)
             ->setStartedAt($started)
             ->setEndedAt($ended)
             ->setTicketNumber($ticketNumber)
             ->setDurationMinutes($minutes);
-        $this->timeBookings->save($tb, true);
-        return $this->toArray($tb);
+        $this->timeBookings->save($timeBooking, true);
+        return $this->toArray($timeBooking);
     }
 
-    /** @param array<string,mixed> $data */
+    /**
+     * Update a time booking with partial data.
+     *
+     * @param array<string,mixed> $data
+     * @return array<string,mixed>|null
+     */
     public function update(int $id, array $data): ?array
     {
-        $tb = $this->timeBookings->find($id);
-        if (!$tb) return null;
+        $timeBooking = $this->timeBookings->find($id);
+        if (!$timeBooking) return null;
         if (array_key_exists('projectId', $data)) {
-            $pid = $data['projectId'];
-            if (!is_numeric($pid)) { throw new \InvalidArgumentException('projectId must be numeric'); }
-            $project = $this->projects->find((int)$pid);
+            $projectId = $data['projectId'];
+            if (!is_numeric($projectId)) { throw new \InvalidArgumentException('projectId must be numeric'); }
+            $project = $this->projects->find((int)$projectId);
             if (!$project) { throw new \RuntimeException('Project not found'); }
-            $tb->setProject($project);
+            $timeBooking->setProject($project);
         }
         if (array_key_exists('activityId', $data)) {
-            $aid = $data['activityId'];
-            if ($aid === null) {
-                $tb->setActivity(null);
+            $activityId = $data['activityId'];
+            if ($activityId === null) {
+                $timeBooking->setActivity(null);
             } else {
-                if (!is_numeric($aid)) { throw new \InvalidArgumentException('activityId must be numeric or null'); }
-                $activity = $this->activities->find((int)$aid);
+                if (!is_numeric($activityId)) { throw new \InvalidArgumentException('activityId must be numeric or null'); }
+                $activity = $this->activities->find((int)$activityId);
                 if (!$activity) { throw new \RuntimeException('Activity not found'); }
-                $tb->setActivity($activity);
+                $timeBooking->setActivity($activity);
             }
         }
         if (array_key_exists('startedAt', $data)) {
-            $tb->setStartedAt(new DateTimeImmutable((string)$data['startedAt']));
+            $timeBooking->setStartedAt(new DateTimeImmutable((string)$data['startedAt']));
         }
         if (array_key_exists('endedAt', $data)) {
-            $tb->setEndedAt(new DateTimeImmutable((string)$data['endedAt']));
+            $timeBooking->setEndedAt(new DateTimeImmutable((string)$data['endedAt']));
         }
         if (array_key_exists('ticketNumber', $data)) {
             $ticket = trim((string)$data['ticketNumber']);
             if ($ticket === '') { throw new \InvalidArgumentException('ticketNumber must not be empty'); }
-            $tb->setTicketNumber($ticket);
+            $timeBooking->setTicketNumber($ticket);
         }
         if (array_key_exists('durationMinutes', $data)) {
             $minutes = (int)$data['durationMinutes'];
             if ($minutes <= 0) { throw new \InvalidArgumentException('durationMinutes must be > 0'); }
-            $tb->setDurationMinutes($minutes);
+            $timeBooking->setDurationMinutes($minutes);
         }
         $this->em->flush();
-        return $this->toArray($tb);
+        return $this->toArray($timeBooking);
     }
 
+    /** Delete a time booking. */
     public function delete(int $id): bool
     {
-        $tb = $this->timeBookings->find($id);
-        if (!$tb) return false;
-        $this->timeBookings->remove($tb, true);
+        $timeBooking = $this->timeBookings->find($id);
+        if (!$timeBooking) return false;
+        $this->timeBookings->remove($timeBooking, true);
         return true;
     }
 
-    private function toArray(TimeBooking $tb): array
+    /**
+     * Map a TimeBooking entity to array for JSON output.
+     *
+     * @return array<string,mixed>
+     */
+    private function toArray(TimeBooking $timeBooking): array
     {
         return [
-            'id' => $tb->getId() ?? 0,
-            'projectId' => $tb->getProject()?->getId() ?? 0,
-            'activityId' => $tb->getActivity()?->getId(),
-            'startedAt' => $tb->getStartedAt()->format(DATE_ATOM),
-            'endedAt' => $tb->getEndedAt()->format(DATE_ATOM),
-            'ticketNumber' => $tb->getTicketNumber(),
-            'durationMinutes' => $tb->getDurationMinutes(),
+            'id' => $timeBooking->getId() ?? 0,
+            'projectId' => $timeBooking->getProject()?->getId() ?? 0,
+            'activityId' => $timeBooking->getActivity()?->getId(),
+            'startedAt' => $timeBooking->getStartedAt()->format(DATE_ATOM),
+            'endedAt' => $timeBooking->getEndedAt()->format(DATE_ATOM),
+            'ticketNumber' => $timeBooking->getTicketNumber(),
+            'durationMinutes' => $timeBooking->getDurationMinutes(),
         ];
     }
 }

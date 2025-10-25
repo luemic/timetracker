@@ -10,6 +10,13 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 class SecurityController extends AbstractController
 {
+    #[Route('/', name: 'app_home')]
+    public function home(): Response
+    {
+        // Redirect the default route to the login page
+        return $this->redirectToRoute('app_login');
+    }
+
     #[Route('/login', name: 'app_login')]
     public function login(AuthenticationUtils $authenticationUtils): Response
     {
@@ -22,6 +29,13 @@ class SecurityController extends AbstractController
             'last_username' => $lastUsername,
             'error' => $error,
         ]);
+    }
+
+    #[Route('/logout', name: 'app_logout')]
+    public function logout(): void
+    {
+        // Controller can be blank: it will be intercepted by the logout key on your firewall.
+        throw new \LogicException('This code should never be reached. Logout is handled by the security firewall.');
     }
 
     #[Route('/profile', name: 'app_profile')]

@@ -46,25 +46,76 @@ class Project
         $this->timeBookings = new ArrayCollection();
     }
 
-    public function getId(): ?int { return $this->id; }
+    public function getId(): ?int
+    {
+        return $this->id;
+    }
 
-    public function getName(): string { return $this->name; }
-    public function setName(string $name): self { $this->name = $name; return $this; }
+    public function getName(): string
+    {
+        return $this->name;
+    }
 
-    public function getCustomer(): ?Customer { return $this->customer; }
-    public function setCustomer(?Customer $customer): self { $this->customer = $customer; return $this; }
+    public function setName(string $name): self
+    {
+        $this->name = $name;
 
-    public function getExternalTicketUrl(): ?string { return $this->externalTicketUrl; }
-    public function setExternalTicketUrl(?string $url): self { $this->externalTicketUrl = $url; return $this; }
+        return $this;
+    }
 
-    public function getExternalTicketLogin(): ?string { return $this->externalTicketLogin; }
-    public function setExternalTicketLogin(?string $login): self { $this->externalTicketLogin = $login; return $this; }
+    public function getCustomer(): ?Customer
+    {
+        return $this->customer;
+    }
 
-    public function getExternalTicketCredentials(): ?string { return $this->externalTicketCredentials; }
-    public function setExternalTicketCredentials(?string $credentials): self { $this->externalTicketCredentials = $credentials; return $this; }
+    public function setCustomer(?Customer $customer): self
+    {
+        $this->customer = $customer;
+
+        return $this;
+    }
+
+    public function getExternalTicketUrl(): ?string
+    {
+        return $this->externalTicketUrl;
+    }
+
+    public function setExternalTicketUrl(?string $url): self
+    {
+        $this->externalTicketUrl = $url;
+
+        return $this;
+    }
+
+    public function getExternalTicketLogin(): ?string
+    {
+        return $this->externalTicketLogin;
+    }
+
+    public function setExternalTicketLogin(?string $login): self
+    {
+        $this->externalTicketLogin = $login;
+
+        return $this;
+    }
+
+    public function getExternalTicketCredentials(): ?string
+    {
+        return $this->externalTicketCredentials;
+    }
+
+    public function setExternalTicketCredentials(?string $credentials): self
+    {
+        $this->externalTicketCredentials = $credentials;
+
+        return $this;
+    }
 
     /** @return Collection<int, ProjectActivity> */
-    public function getProjectActivities(): Collection { return $this->projectActivities; }
+    public function getProjectActivities(): Collection
+    {
+        return $this->projectActivities;
+    }
 
     public function addProjectActivity(ProjectActivity $pa): self
     {
@@ -72,6 +123,7 @@ class Project
             $this->projectActivities->add($pa);
             $pa->setProject($this);
         }
+
         return $this;
     }
 
@@ -82,11 +134,15 @@ class Project
                 $pa->setProject(null);
             }
         }
+
         return $this;
     }
 
     /** @return Collection<int, TimeBooking> */
-    public function getTimeBookings(): Collection { return $this->timeBookings; }
+    public function getTimeBookings(): Collection
+    {
+        return $this->timeBookings;
+    }
 
     public function addTimeBooking(TimeBooking $tb): self
     {
@@ -94,14 +150,18 @@ class Project
             $this->timeBookings->add($tb);
             $tb->setProject($this);
         }
+
         return $this;
     }
 
     public function removeTimeBooking(TimeBooking $tb): self
     {
         if ($this->timeBookings->removeElement($tb)) {
-            if ($tb->getProject() === $this) { $tb->setProject(null); }
+            if ($tb->getProject() === $this) {
+                $tb->setProject(null);
+            }
         }
+
         return $this;
     }
 }

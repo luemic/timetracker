@@ -16,19 +16,33 @@ class ProjectActivityRepository extends ServiceEntityRepository
         parent::__construct($registry, ProjectActivity::class);
     }
 
+    /**
+     * Persist a ProjectActivity entity.
+     *
+     * @param ProjectActivity $entity The link entity to persist
+     * @param bool $flush Whether to flush immediately
+     */
     public function save(ProjectActivity $entity, bool $flush = false): void
     {
-        $this->_em->persist($entity);
+        $em = $this->getEntityManager();
+        $em->persist($entity);
         if ($flush) {
-            $this->_em->flush();
+            $em->flush();
         }
     }
 
+    /**
+     * Remove a ProjectActivity entity.
+     *
+     * @param ProjectActivity $entity The link entity to remove
+     * @param bool $flush Whether to flush immediately
+     */
     public function remove(ProjectActivity $entity, bool $flush = false): void
     {
-        $this->_em->remove($entity);
+        $em = $this->getEntityManager();
+        $em->remove($entity);
         if ($flush) {
-            $this->_em->flush();
+            $em->flush();
         }
     }
 }

@@ -164,7 +164,7 @@ class ManagementController extends AbstractController
         try {
             $startedAt = new DateTimeImmutable((string)$startedAtStr);
             $endedAt = new DateTimeImmutable((string)$endedAtStr);
-        } catch (\Exception $e) {
+        } catch (\Exception $exception) {
             return $this->json(['error' => 'Invalid date format for startedAt or endedAt'], 400);
         }
         if ($endedAt <= $startedAt) {

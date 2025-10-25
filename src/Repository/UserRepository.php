@@ -16,19 +16,33 @@ class UserRepository extends ServiceEntityRepository
         parent::__construct($registry, User::class);
     }
 
+    /**
+     * Persist a User entity.
+     *
+     * @param User $entity The user to persist
+     * @param bool $flush Whether to flush immediately
+     */
     public function save(User $entity, bool $flush = false): void
     {
-        $this->_em->persist($entity);
+        $em = $this->getEntityManager();
+        $em->persist($entity);
         if ($flush) {
-            $this->_em->flush();
+            $em->flush();
         }
     }
 
+    /**
+     * Remove a User entity.
+     *
+     * @param User $entity The user to remove
+     * @param bool $flush Whether to flush immediately
+     */
     public function remove(User $entity, bool $flush = false): void
     {
-        $this->_em->remove($entity);
+        $em = $this->getEntityManager();
+        $em->remove($entity);
         if ($flush) {
-            $this->_em->flush();
+            $em->flush();
         }
     }
 }

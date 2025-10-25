@@ -3,6 +3,7 @@
 {% block title %}Zeiterfassung{% endblock %}
 
 {% block body %}
+{% verbatim %}
 <div id="app">
   <div class="mb-4 border-bottom">
     <ul class="nav nav-tabs">
@@ -110,8 +111,8 @@
                  :empty-item="{name:''}"
                  @refresh="loadActivities"
                  create-url="/api/activities"
-                 update-url="(id)=>`/api/activities/${id}`"
-                 delete-url="(id)=>`/api/activities/${id}`">
+                 :update-url="id => `/api/activities/${id}`"
+                 :delete-url="id => `/api/activities/${id}`">
     </crud-entity>
   </section>
 
@@ -314,6 +315,8 @@ createApp({
     });
 
     return { tab, error, customers, activities, projects, timeBookings, timeForm, projectForm,
+      // expose loaders so @refresh handlers in templates can call them
+      loadCustomers, loadActivities, loadProjects, loadTimeBookings,
       saveTimeBooking, resetTimeForm, formatDateTime, projectName, activityName, customerName,
       editTime, deleteTime, saveProject, editProject, deleteProject, resetProjectForm };
   },
@@ -388,4 +391,5 @@ createApp({
   }
 }).mount('#app');
 </script>
+{% endverbatim %}
 {% endblock %}

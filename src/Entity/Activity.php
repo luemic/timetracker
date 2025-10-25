@@ -32,14 +32,32 @@ class Activity
         $this->timeBookings = new ArrayCollection();
     }
 
-    public function getId(): ?int { return $this->id; }
+    public function getId(): ?int
+    {
+        return $this->id;
+    }
 
-    public function getName(): string { return $this->name; }
-    public function setName(string $name): self { $this->name = $name; return $this; }
+    public function getName(): string
+    {
+        return $this->name;
+    }
+
+    public function setName(string $name): self
+    {
+        $this->name = $name;
+
+        return $this;
+    }
 
     /** @return Collection<int, ProjectActivity> */
-    public function getProjectActivities(): Collection { return $this->projectActivities; }
+    public function getProjectActivities(): Collection
+    {
+        return $this->projectActivities;
+    }
 
     /** @return Collection<int, TimeBooking> */
-    public function getTimeBookings(): Collection { return $this->timeBookings; }
+    public function getTimeBookings(): Collection
+    {
+        return $this->timeBookings;
+    }
 }

@@ -16,19 +16,33 @@ class TimeBookingRepository extends ServiceEntityRepository
         parent::__construct($registry, TimeBooking::class);
     }
 
+    /**
+     * Persist a TimeBooking entity.
+     *
+     * @param TimeBooking $entity The time booking to persist
+     * @param bool $flush Whether to flush immediately
+     */
     public function save(TimeBooking $entity, bool $flush = false): void
     {
-        $this->_em->persist($entity);
+        $em = $this->getEntityManager();
+        $em->persist($entity);
         if ($flush) {
-            $this->_em->flush();
+            $em->flush();
         }
     }
 
+    /**
+     * Remove a TimeBooking entity.
+     *
+     * @param TimeBooking $entity The time booking to remove
+     * @param bool $flush Whether to flush immediately
+     */
     public function remove(TimeBooking $entity, bool $flush = false): void
     {
-        $this->_em->remove($entity);
+        $em = $this->getEntityManager();
+        $em->remove($entity);
         if ($flush) {
-            $this->_em->flush();
+            $em->flush();
         }
     }
 }
