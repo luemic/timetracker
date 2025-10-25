@@ -43,7 +43,7 @@ class TimeBookingServiceTest extends TestCase
         $this->setId($tb, 5);
 
         $repo = $this->createMock(TimeBookingRepository::class);
-        $repo->expects($this->once())->method('findBy')->with([], ['id' => 'ASC'])->willReturn([$tb]);
+        $repo->expects($this->once())->method('findBy')->with([], ['startedAt' => 'DESC', 'id' => 'DESC'])->willReturn([$tb]);
 
         $svc = $this->makeService($repo);
         $out = $svc->list();

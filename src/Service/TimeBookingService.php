@@ -31,7 +31,8 @@ class TimeBookingService
     public function list(): array
     {
         $criteria = [];
-        $orderBy = ['id' => 'ASC'];
+        // Sort by start time ("von") descending: newest first; add id DESC for stable ordering
+        $orderBy = ['startedAt' => 'DESC', 'id' => 'DESC'];
         $user = $this->security?->getUser();
         if ($user) {
             $criteria['user'] = $user;
