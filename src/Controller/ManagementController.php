@@ -204,7 +204,8 @@ class ManagementController extends AbstractController
             ->setTicketNumber($ticketNumber)
             ->setStartedAt($startedAt)
             ->setEndedAt($endedAt)
-            ->setDurationMinutes($durationMinutes);
+            ->setDurationMinutes($durationMinutes)
+            ->setUser($this->getUser());
 
         $timeBookings->save($tb, true);
 
