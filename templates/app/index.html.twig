@@ -17,42 +17,42 @@
   <!-- Zeitbuchungen -->
   <section v-if="tab==='time'">
     <h2 class="h4 mb-3">Neue Zeitbuchung</h2>
-    <form @submit.prevent="saveTimeBooking" class="row g-2 align-items-end">
-      <div class="col-md-3">
+    <form @submit.prevent="saveTimeBooking" class="one-line">
+      <div class="field">
         <label class="form-label">Projekt</label>
         <select v-model.number="timeForm.projectId" class="form-select" required>
           <option :value="''" disabled>Bitte wählen…</option>
           <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
         </select>
       </div>
-      <div class="col-md-3">
+      <div class="field">
         <label class="form-label">Tätigkeit (optional)</label>
         <select v-model.number="timeForm.activityId" class="form-select">
           <option :value="null">– keine –</option>
           <option v-for="a in activities" :key="a.id" :value="a.id">{{ a.name }}</option>
         </select>
       </div>
-      <div class="col-md-2">
+      <div class="field small">
         <label class="form-label">Ticket</label>
         <input v-model.trim="timeForm.ticketNumber" class="form-control" required>
       </div>
-      <div class="col-md-2">
+      <div class="field">
         <label class="form-label">Start</label>
         <input v-model="timeForm.startedAtLocal" type="datetime-local" class="form-control" required>
       </div>
-      <div class="col-md-2">
+      <div class="field">
         <label class="form-label">Ende</label>
         <input v-model="timeForm.endedAtLocal" type="datetime-local" class="form-control" required>
       </div>
-      <div class="col-md-2">
+      <div class="field xs">
         <label class="form-label">Dauer (min, optional)</label>
         <input v-model.number="timeForm.durationMinutes" type="number" min="1" class="form-control" placeholder="Auto">
       </div>
-      <div class="col-md-2">
-        <button type="submit" class="btn btn-primary w-100">{{ timeForm.id ? 'Aktualisieren' : 'Speichern' }}</button>
+      <div class="btn-wrap">
+        <button type="submit" class="btn btn-primary">{{ timeForm.id ? 'Aktualisieren' : 'Speichern' }}</button>
       </div>
-      <div class="col-md-2" v-if="timeForm.id">
-        <button type="button" class="btn btn-secondary w-100" @click="resetTimeForm">Abbrechen</button>
+      <div class="btn-wrap" v-if="timeForm.id">
+        <button type="button" class="btn btn-secondary" @click="resetTimeForm">Abbrechen</button>
       </div>
     </form>
 
@@ -75,7 +75,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="tb in timeBookings" :key="tb.id" @click="editTime(tb)" style="cursor:pointer">
+          <tr v-for="tb in timeBookings" :key="tb.id" @click="editTime(tb)" class="clickable-row">
             <td>{{ tb.id }}</td>
             <td>{{ projectName(tb.projectId) }}</td>
             <td>{{ activityName(tb.activityId) }}</td>
@@ -119,35 +119,35 @@
   <!-- Projekte -->
   <section v-if="tab==='projects'">
     <h2 class="h4 mb-3">Projekte</h2>
-    <form @submit.prevent="saveProject" class="row g-2 align-items-end mb-3">
-      <div class="col-md-3">
+    <form @submit.prevent="saveProject" class="one-line">
+      <div class="field">
         <label class="form-label">Name</label>
         <input v-model.trim="projectForm.name" class="form-control" required>
       </div>
-      <div class="col-md-3">
+      <div class="field">
         <label class="form-label">Kunde</label>
         <select v-model.number="projectForm.customerId" class="form-select" required>
           <option :value="''" disabled>Bitte wählen…</option>
           <option v-for="c in customers" :key="c.id" :value="c.id">{{ c.name }}</option>
         </select>
       </div>
-      <div class="col-md-3">
+      <div class="field">
         <label class="form-label">Ticket URL</label>
         <input v-model.trim="projectForm.externalTicketUrl" class="form-control" placeholder="https://…">
       </div>
-      <div class="col-md-3">
+      <div class="field small">
         <label class="form-label">Ticket Login</label>
         <input v-model.trim="projectForm.externalTicketLogin" class="form-control">
       </div>
-      <div class="col-md-4">
+      <div class="field">
         <label class="form-label">Ticket Credentials</label>
         <input v-model.trim="projectForm.externalTicketCredentials" class="form-control">
       </div>
-      <div class="col-md-2">
-        <button type="submit" class="btn btn-primary w-100">{{ projectForm.id ? 'Aktualisieren' : 'Speichern' }}</button>
+      <div class="btn-wrap">
+        <button type="submit" class="btn btn-primary">{{ projectForm.id ? 'Aktualisieren' : 'Speichern' }}</button>
       </div>
-      <div class="col-md-2" v-if="projectForm.id">
-        <button type="button" class="btn btn-secondary w-100" @click="resetProjectForm">Abbrechen</button>
+      <div class="btn-wrap" v-if="projectForm.id">
+        <button type="button" class="btn btn-secondary" @click="resetProjectForm">Abbrechen</button>
       </div>
     </form>
 
@@ -159,13 +159,13 @@
         </tr>
         </thead>
         <tbody>
-        <tr v-for="p in projects" :key="p.id" @click="editProject(p)" style="cursor:pointer">
+        <tr v-for="p in projects" :key="p.id" @click="editProject(p)" class="clickable-row">
           <td>{{ p.id }}</td>
           <td>{{ p.name }}</td>
           <td>{{ customerName(p.customerId) }}</td>
-          <td class="text-truncate" style="max-width:220px">{{ p.externalTicketUrl }}</td>
+          <td class="text-truncate max-220">{{ p.externalTicketUrl }}</td>
           <td>{{ p.externalTicketLogin }}</td>
-          <td class="text-truncate" style="max-width:220px">{{ p.externalTicketCredentials }}</td>
+          <td class="text-truncate max-220">{{ p.externalTicketCredentials }}</td>
           <td class="text-end">
             <button class="btn btn-sm btn-outline-danger" @click.stop="deleteProject(p)">Löschen</button>
           </td>
@@ -209,10 +209,15 @@ createApp({
 
     // time bookings
     const timeBookings = ref([]);
-    const timeForm = reactive({ id:null, projectId:'', activityId:null, ticketNumber:'', startedAtLocal:'', endedAtLocal:'', durationMinutes:null });
+    // Prefill datetime fields with current local time and +15 minutes
+    const now = new Date();
+    const startDefault = toLocalInputValue(now);
+    const endDefault = toLocalInputValue(addMinutes(now, 15));
+    const timeForm = reactive({ id:null, projectId:'', activityId:null, ticketNumber:'', startedAtLocal:startDefault, endedAtLocal:endDefault, durationMinutes:null });
 
     function resetTimeForm() {
-      Object.assign(timeForm, { id:null, projectId:'', activityId:null, ticketNumber:'', startedAtLocal:'', endedAtLocal:'', durationMinutes:null });
+      const nowReset = new Date();
+      Object.assign(timeForm, { id:null, projectId:'', activityId:null, ticketNumber:'', startedAtLocal: toLocalInputValue(nowReset), endedAtLocal: toLocalInputValue(addMinutes(nowReset, 15)), durationMinutes:null });
     }
 
     function localToIso(local) {
@@ -398,18 +403,18 @@ createApp({
       template: `
       <div>
         <h2 class="h4 mb-3">{{ title }}</h2>
-        <form @submit.prevent="save" class="row g-2 align-items-end mb-3">
+        <form @submit.prevent="save" class="one-line">
           <template v-for="col in columns" :key="col.key">
-            <div v-if="col.key!=='id'" class="col-md-3">
+            <div v-if="col.key!=='id'" class="field">
               <label class="form-label">{{ col.label }}</label>
               <input v-model.trim="form[col.key]" class="form-control">
             </div>
           </template>
-          <div class="col-md-2">
-            <button type="submit" class="btn btn-primary w-100">{{ editingId ? 'Aktualisieren' : 'Anlegen' }}</button>
+          <div class="btn-wrap">
+            <button type="submit" class="btn btn-primary">{{ editingId ? 'Aktualisieren' : 'Anlegen' }}</button>
           </div>
-          <div class="col-md-2" v-if="editingId">
-            <button type="button" class="btn btn-secondary w-100" @click="reset">Abbrechen</button>
+          <div class="btn-wrap" v-if="editingId">
+            <button type="button" class="btn btn-secondary" @click="reset">Abbrechen</button>
           </div>
         </form>
         <div v-if="error" class="alert alert-danger">{{ error }}</div>
@@ -422,7 +427,7 @@ createApp({
               </tr>
             </thead>
             <tbody>
-              <tr v-for="item in items" :key="item.id" @click="startEdit(item)" style="cursor:pointer">
+              <tr v-for="item in items" :key="item.id" @click="startEdit(item)" class="clickable-row">
                 <td v-for="col in columns" :key="col.key">{{ item[col.key] }}</td>
                 <td class="text-end">
                   <button class="btn btn-sm btn-outline-danger" @click.stop="remove(item)">Löschen</button>

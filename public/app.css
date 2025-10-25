@@ -1,0 +1,19 @@
+:root{}
+
+/* Layout paddings extracted from inline styles */
+.page-main{padding-left:5%;padding-right:5%;}
+
+/* Login page container extracted from inline styles */
+.login-container{max-width:420px;margin:3rem auto;}
+
+/* Utility for one-line forms (no wrap, responsive shrinking) */
+.one-line{display:flex;flex-wrap:nowrap;gap:.5rem;align-items:end}
+.one-line>.field{flex:1 1 12rem;min-width:8rem}
+.one-line>.field.small{flex:0 1 9rem;min-width:7rem}
+.one-line>.field.xs{flex:0 1 7rem;min-width:6rem}
+.one-line>.btn-wrap{flex:0 0 auto}
+.one-line .form-control,.one-line .form-select{width:100%}
+
+/* Table row / cell utilities extracted from inline styles */
+.clickable-row{cursor:pointer}
+.max-220{max-width:220px}
