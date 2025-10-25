@@ -1,0 +1,41 @@
+# Symfony App (project/)
+
+This directory contains the Symfony application code (controllers, services, entities, templates) that runs inside the Docker setup at the repository root.
+
+## Quick start (with Docker)
+- Build and start containers:
+  - `docker compose build`
+  - `docker compose up -d`
+- Open the app: http://localhost:8080
+
+## Database & Migrations
+- Connection (inside containers) is preconfigured in `.env`:
+  - `DATABASE_URL="mysql://app:app@symfony-db:3306/app?serverVersion=11&charset=utf8mb4"`
+- Run migrations in the PHP container:
+  - `docker compose exec php sh -lc "php bin/console doctrine:migrations:migrate"`
+- Validate schema:
+  - `docker compose exec php sh -lc "php bin/console doctrine:schema:validate"`
+
+## Create a user (console)
+Run the interactive command inside the PHP container:
+- `docker compose exec php sh -lc "php bin/console app:user:create"`
+
+## Login & Frontend
+- Default route `/` redirects to `/login`.
+- After login, the main app is available at `/app`.
+
+## Tests
+- PHPUnit is installed and configured. Xdebug coverage is available in the container.
+- Run tests:
+  - `docker compose exec php sh -lc "vendor/bin/phpunit"`
+  - Optionally enable coverage on demand: `docker compose exec -e XDEBUG_MODE=coverage php sh -lc "vendor/bin/phpunit"`
+
+## Project structure (high level)
+- `src/` – PHP code (Controllers, Entities, Services, Repositories)
+- `templates/` – Twig templates (includes Vue-based app in `templates/app/`)
+- `migrations/` – Doctrine migrations
+- `tests/` – Unit tests for services
+- `public/` – Front controller and public assets
+
+## License
+This application is provided under the MIT License. See `Licence.md` in this folder.
