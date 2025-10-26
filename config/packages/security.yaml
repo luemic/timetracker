@@ -1,6 +1,6 @@
 security:
     password_hashers:
-        Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface: 'auto'
+        App\Entity\User: 'auto'
 
     providers:
         app_user_provider:
@@ -10,8 +10,9 @@ security:
 
     firewalls:
         dev:
-            pattern: ^/(_(profiler|wdt)|css|images|js)/
+            pattern: ^/(?:_(?:profiler|wdt)|assets/)
             security: false
+
         main:
             lazy: true
             provider: app_user_provider
@@ -19,22 +20,47 @@ security:
                 login_path: app_login
                 check_path: app_login
                 enable_csrf: true
+                csrf_token_id: authenticate
+                username_parameter: _username
+                password_parameter: _password
                 default_target_path: app_frontend
             logout:
                 path: app_logout
+                # where to redirect after logout
                 target: app_login
 
     access_control:
+        # login and static are open
         - { path: ^/login$, roles: PUBLIC_ACCESS }
-        - { path: ^/api, roles: ROLE_USER }
-        - { path: ^/app$, roles: ROLE_USER }
-        - { path: ^/profile, roles: ROLE_USER }
+        - { path: ^/index_test\.php$, roles: PUBLIC_ACCESS }
+        - { path: ^/index_test\.php/login$, roles: PUBLIC_ACCESS }
+        - { path: ^/app\.css$, roles: PUBLIC_ACCESS }
+        # APIs and app require authentication
+        - { path: ^/(?:app|api|legacy-api), roles: ROLE_USER }
 
 when@test:
     security:
         password_hashers:
-            Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface:
-                algorithm: auto
-                cost: 4
-                time_cost: 3
-                memory_cost: 10
+            Symfony\Component\Security\Core\User\InMemoryUser: 'plaintext'
+        providers:
+            app_memory_test_user:
+                memory:
+                    users:
+                        test@example.com: { password: 'test12345', roles: ['ROLE_USER'] }
+            chain_provider:
+                chain:
+                    providers: ['app_user_provider', 'app_memory_test_user']
+        firewalls:
+            main:
+                provider: chain_provider
+                form_login:
+                    # Use route names so matching works regardless of front controller (index.php vs index_test.php)
+                    login_path: app_login
+                    check_path: app_login
+                    enable_csrf: true
+                    csrf_token_id: authenticate
+                    username_parameter: _username
+                    password_parameter: _password
+                    default_target_path: '/index_test.php/app'
+                logout:
+                    target: '/index_test.php/login'
