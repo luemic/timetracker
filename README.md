@@ -56,6 +56,21 @@ Default test user (loaded by fixtures):
 - E-Mail: test@example.com
 - Password: test12345
 
+### How to debug and ensure you are in the TEST environment
+- Browser (must use the test front controller):
+  - Open: http://localhost:8080/index_test.php/login (note the index_test.php part)
+  - Visual hint: a yellow "TEST" badge appears in the navbar when APP_ENV=test.
+  - Diagnostics JSON: http://localhost:8080/index_test.php/_debug/env shows current env, front controller, and the effective database name.
+- CLI (force test env):
+  - Prefix commands with `APP_ENV=test`, e.g. `docker compose exec php sh -lc "APP_ENV=test php bin/console doctrine:query:sql 'SELECT DATABASE()'"`
+- Database separation:
+  - `.env.test` points to the same DB server, and Doctrine appends `_test` automatically (see `config/packages/doctrine.yaml when@test dbname_suffix`).
+  - The diagnostics endpoint should show `database_function: app_test` when running through index_test.php.
+- Common pitfalls:
+  - Navigating to `/login` (without index_test.php) uses the normal front controller (dev), not the test one.
+  - A local `.env.local` can override settings; remove/adjust it for tests if needed.
+  - Clear caches if behavior seems stale: `docker compose exec php sh -lc "APP_ENV=test php bin/console cache:clear"`
+
 ## Project structure (high level)
 - `src/` – PHP code (Controllers, Entities, Services, Repositories)
 - `templates/` – Twig templates (includes Vue-based app in `templates/app/`)

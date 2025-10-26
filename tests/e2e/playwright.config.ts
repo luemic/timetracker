@@ -6,7 +6,9 @@ export default defineConfig({
   expect: { timeout: 5_000 },
   retries: 0,
   use: {
-    baseURL: process.env.BASE_URL || 'http://localhost:8080/index_test.php',
+    // Trailing slash is IMPORTANT so that relative navigations like page.goto('login')
+    // resolve to http://localhost:8080/index_test.php/login (and not drop index_test.php)
+    baseURL: process.env.BASE_URL || 'http://localhost:8080/index_test.php/',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',

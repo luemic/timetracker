@@ -24,19 +24,19 @@ class UserFixture extends Fixture
 
     public function load(ObjectManager $manager): void
     {
-        // If a user with the same email already exists, skip to keep fixture idempotent
         $repo = $manager->getRepository(User::class);
-        $existing = $repo->findOneBy(['email' => 'test@example.com']);
-        if ($existing instanceof User) {
-            $this->addReference(self::REF_TEST_USER, $existing);
-            return;
+        $user = $repo->findOneBy(['email' => 'test@example.com']);
+
+        if (!$user instanceof User) {
+            $user = new User();
+            $user->setEmail('test@example.com');
+            $manager->persist($user);
         }
 
-        $user = new User();
-        $user->setEmail('test@example.com');
-        $hash = $this->passwordHasher->hashPassword($user, 'test12345');
-        $user->setPassword($hash);
-        $manager->persist($user);
+        // Always ensure the password matches the expected test credentials using the same hasher
+        $hashed = $this->passwordHasher->hashPassword($user, 'test12345');
+        $user->setPassword($hashed);
+
         $manager->flush();
 
         $this->addReference(self::REF_TEST_USER, $user);
