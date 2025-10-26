@@ -1,0 +1,79 @@
+# General
+app.brand: "Symfony App"
+app.logged_in_as: "Logged in as %user%"
+app.login: "Login"
+app.logout: "Logout"
+app.settings: "Settings"
+
+# Login
+login.title: "Login"
+login.email: "Email"
+login.password: "Password"
+login.submit: "Sign in"
+
+# Tabs
+tabs.time: "Time bookings"
+tabs.customers: "Customers"
+tabs.projects: "Projects"
+tabs.activities: "Activities"
+
+# Headings
+headings.new_time_booking: "New time booking"
+headings.bookings: "Bookings"
+headings.projects: "Projects"
+
+# Fields
+fields.project: "Project"
+fields.activity_optional: "Activity (optional)"
+fields.ticket: "Ticket"
+fields.start: "Start"
+fields.end: "End"
+fields.duration_optional: "Duration (min, optional)"
+fields.name: "Name"
+fields.customer: "Customer"
+fields.ticket_url: "Ticket URL"
+fields.ticket_login: "Ticket login"
+fields.ticket_credentials: "Ticket credentials"
+
+# Buttons
+buttons.save: "Save"
+buttons.update: "Update"
+buttons.cancel: "Cancel"
+buttons.delete: "Delete"
+buttons.create: "Create"
+
+# Table headers
+table.id: "ID"
+table.project: "Project"
+table.activity: "Activity"
+table.ticket: "Ticket"
+table.start: "Start"
+table.end: "End"
+table.duration_min: "Duration (min)"
+table.actions: "Actions"
+
+# Confirmations
+confirm.delete_entry: "Delete entry?"
+confirm.delete_project: "Delete project?"
+
+# CRUD titles
+crud.customers: "Customers"
+crud.activities: "Activities"
+
+# App
+app.title: "Time Tracking"
+
+# Common
+common.please_select: "Please select…"
+common.none: "– none –"
+
+# Errors (generic)
+errors.unexpected: "Unexpected error. Please try again later."
+errors.invalid_input: "Invalid input."
+errors.invalid_input_generic: "Invalid input. Please check the submitted data."
+errors.not_found: "Resource not found."
+
+# Settings
+settings.title: "Settings"
+settings.language: "Language"
+settings.saved: "Settings have been saved."

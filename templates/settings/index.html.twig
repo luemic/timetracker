@@ -1,0 +1,24 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'settings.title'|trans }}{% endblock %}
+
+{% block body %}
+<div class="container" style="max-width: 680px">
+  <h1 class="h3 mb-4">{{ 'settings.title'|trans }}</h1>
+
+  <form action="{{ path('app_settings_locale') }}" method="post" class="one-line mb-4">
+    <div class="field">
+      <label for="locale" class="form-label">{{ 'settings.language'|trans }}</label>
+      <select id="locale" name="locale" class="form-select">
+        <option value="de" {{ current_locale == 'de' ? 'selected' : '' }}>Deutsch</option>
+        <option value="en" {{ current_locale == 'en' ? 'selected' : '' }}>English</option>
+      </select>
+    </div>
+    <div class="btn-wrap">
+      <button type="submit" class="btn btn-primary">{{ 'buttons.save'|trans }}</button>
+    </div>
+  </form>
+
+  <p class="text-muted">{{ 'app.brand'|trans }} – {{ 'settings.language'|trans }}: <strong>{{ current_locale|upper }}</strong></p>
+</div>
+{% endblock %}

@@ -3,6 +3,7 @@ app.brand: "Symfony App"
 app.logged_in_as: "Eingeloggt als %user%"
 app.login: "Login"
 app.logout: "Logout"
+app.settings: "Einstellungen"
 
 # Login
 login.title: "Login"
@@ -71,3 +72,8 @@ errors.unexpected: "Unerwarteter Fehler. Bitte versuchen Sie es später erneut."
 errors.invalid_input: "Ungültige Eingabe."
 errors.invalid_input_generic: "Ungültige Eingabe. Bitte prüfen Sie die übermittelten Daten."
 errors.not_found: "Ressource wurde nicht gefunden."
+
+# Settings
+settings.title: "Einstellungen"
+settings.language: "Sprache"
+settings.saved: "Einstellungen wurden gespeichert."

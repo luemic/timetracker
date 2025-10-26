@@ -222,7 +222,7 @@
           <td>{{ p.externalTicketLogin }}</td>
           <td class="text-truncate max-220">{{ p.externalTicketCredentials }}</td>
           <td class="text-end">
-            <button class="btn btn-sm btn-outline-danger" @click.stop="deleteProject(p)">Löschen</button>
+            <button class="btn btn-sm btn-outline-danger" @click.stop="deleteProject(p)">{{ T.buttons.delete }}</button>
           </td>
         </tr>
         </tbody>
@@ -452,7 +452,7 @@ createApp({
             emit('refresh');
           } catch(e){ error.value = e.message || String(e); }
         }
-        async function remove(item){ if(!confirm('Wirklich löschen?')) return; try{ const url = typeof props.deleteUrl==='function' ? props.deleteUrl(item.id) : props.deleteUrl; await jsonFetch(url, { method:'DELETE' }); emit('refresh'); if(editingId.value===item.id) reset(); } catch(e){ error.value = e.message || String(e); } }
+        async function remove(item){ if(!confirm(props.t.confirm.delete_entry)) return; try{ const url = typeof props.deleteUrl==='function' ? props.deleteUrl(item.id) : props.deleteUrl; await jsonFetch(url, { method:'DELETE' }); emit('refresh'); if(editingId.value===item.id) reset(); } catch(e){ error.value = e.message || String(e); } }
 
         return { form, editingId, error, reset, startEdit, save, remove };
       },
@@ -479,7 +479,7 @@ createApp({
             <thead>
               <tr>
                 <th v-for="col in columns" :key="col.key">{{ col.label }}</th>
-                <th class="text-end">Aktionen</th>
+                <th class="text-end">{{ t.table.actions }}</th>
               </tr>
             </thead>
             <tbody>

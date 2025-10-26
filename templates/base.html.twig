@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="{{ app.request.locale|default('de') }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,9 +11,10 @@
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
   <div class="container-fluid">
     <a class="navbar-brand" href="/">{{ 'app.brand'|trans }}</a>
-    <div class="d-flex">
+    <div class="d-flex align-items-center gap-2">
       {% if app.user %}
-        <span class="navbar-text me-3">{{ 'app.logged_in_as'|trans({'%user%': app.user.userIdentifier}) }}</span>
+        <a class="btn btn-outline-light" href="{{ path('app_settings') }}">{{ 'app.settings'|trans }}</a>
+        <span class="navbar-text me-2">{{ 'app.logged_in_as'|trans({'%user%': app.user.userIdentifier}) }}</span>
         <a class="btn btn-outline-light" href="{{ path('app_logout') }}">{{ 'app.logout'|trans }}</a>
       {% else %}
         <a class="btn btn-outline-light" href="{{ path('app_login') }}">{{ 'app.login'|trans }}</a>
