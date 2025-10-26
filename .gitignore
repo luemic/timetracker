@@ -9,6 +9,8 @@
 /public/bundles/
 /var/
 /vendor/
+/tests/e2e/node_modules
+/tests/e2e/test-results
 ###< symfony/framework-bundle ###
 
 ###> phpunit/phpunit ###
