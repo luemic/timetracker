@@ -1,0 +1,96 @@
+name: Deploy to server
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Rsync and remote deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        shell: bash
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -p "${SSH_PORT:-22}" "$SSH_HOST" >> ~/.ssh/known_hosts
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+
+      - name: Rsync project to server
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          TARGET_DIR: ${{ secrets.TARGET_DIR }}
+        run: |
+          RSYNC_EXCLUDES=(
+            ".git/"
+            "project/var/"
+            "project/vendor/"
+            "project/tests/"
+            "project/.phpunit.cache/"
+            "project/phpunit.xml"
+            "project/.env*"
+            "project/tests/e2e/node_modules/"
+            "project/tests/e2e/test-results/"
+            "project/tests/e2e/playwright-report/"
+          )
+          EXCLUDE_ARGS=""
+          for e in "${RSYNC_EXCLUDES[@]}"; do EXCLUDE_ARGS+=" --exclude=$e"; done
+          # Sync only the Symfony project directory to the target path
+          rsync -az --delete $EXCLUDE_ARGS -e "ssh -p ${SSH_PORT:-22}" project/ "${SSH_USER}@${SSH_HOST}:${TARGET_DIR}"
+
+      - name: Run remote install and migrations
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          TARGET_DIR: ${{ secrets.TARGET_DIR }}
+        run: |
+          ssh -p "${SSH_PORT:-22}" "${SSH_USER}@${SSH_HOST}" << 'EOSSH'
+          set -e
+          cd "$TARGET_DIR"
+          # Ensure proper perms for cache/logs (adjust user:group if needed)
+          mkdir -p var var/cache var/log
+          # Install PHP deps (Composer must be installed on the server)
+          if command -v composer >/dev/null 2>&1; then
+            composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
+          elif [ -f composer.phar ]; then
+            php composer.phar install --no-dev --prefer-dist --optimize-autoloader --no-interaction
+          else
+            echo "Composer not found on server. Please install composer or upload composer.phar" >&2
+            exit 1
+          fi
+          # Warmup cache and run DB migrations (expects env vars configured on server)
+          php bin/console cache:clear --env=prod --no-warmup || true
+          php bin/console doctrine:migrations:migrate -n --env=prod || true
+          php bin/console cache:warmup --env=prod || true
+          EOSSH
+
+# Required repository secrets (configure in GitHub → Settings → Secrets and variables → Actions):
+#   SSH_HOST   → your target host, e.g. example.com
+#   SSH_USER   → SSH user with write permissions to TARGET_DIR
+#   SSH_KEY    → Private key (PEM) for SSH_USER
+# Optional:
+#   SSH_PORT   → SSH port (default 22)
+#   TARGET_DIR → Absolute path on the server where the Symfony app (project/) should be deployed, e.g. /var/www/myapp
+#
+# Notes:
+# - This workflow deploys the contents of the local project/ directory to TARGET_DIR.
+# - Ensure the server has PHP and Composer installed and the web server points to TARGET_DIR/public.
+# - Configure environment variables (e.g., DATABASE_URL, APP_ENV=prod) on the server, not in the repo.
+#
