@@ -62,49 +62,49 @@
 <div id="app">
   <div class="mb-4 border-bottom">
     <ul class="nav nav-tabs">
-      <li class="nav-item"><button class="nav-link" :class="{active: tab==='time'}" @click="tab='time'">{{ T.tabs.time }}</button></li>
-      <li class="nav-item"><button class="nav-link" :class="{active: tab==='customers'}" @click="tab='customers'">{{ T.tabs.customers }}</button></li>
-      <li class="nav-item"><button class="nav-link" :class="{active: tab==='projects'}" @click="tab='projects'">{{ T.tabs.projects }}</button></li>
-      <li class="nav-item"><button class="nav-link" :class="{active: tab==='activities'}" @click="tab='activities'">{{ T.tabs.activities }}</button></li>
+      <li class="nav-item"><button id="tab-time" class="nav-link" :class="{active: tab==='time'}" @click="tab='time'">{{ T.tabs.time }}</button></li>
+      <li class="nav-item"><button id="tab-customers" class="nav-link" :class="{active: tab==='customers'}" @click="tab='customers'">{{ T.tabs.customers }}</button></li>
+      <li class="nav-item"><button id="tab-projects" class="nav-link" :class="{active: tab==='projects'}" @click="tab='projects'">{{ T.tabs.projects }}</button></li>
+      <li class="nav-item"><button id="tab-activities" class="nav-link" :class="{active: tab==='activities'}" @click="tab='activities'">{{ T.tabs.activities }}</button></li>
     </ul>
   </div>
 
   <!-- Zeitbuchungen -->
-  <section v-if="tab==='time'">
+  <section id="section-time" v-if="tab==='time'">
     <h2 class="h4 mb-3">{{ T.headings.new_time_booking }}</h2>
     <form @submit.prevent="saveTimeBooking" class="one-line">
       <div class="field">
         <label class="form-label">{{ T.fields.project }}</label>
-        <select v-model.number="timeForm.projectId" class="form-select" required>
+        <select id="input-time-project" v-model.number="timeForm.projectId" class="form-select" required>
           <option :value="''" disabled>{{ T.fields.please_select }}</option>
           <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
         </select>
       </div>
       <div class="field">
         <label class="form-label">{{ T.fields.activity_optional }}</label>
-        <select v-model.number="timeForm.activityId" class="form-select">
+        <select id="input-time-activity" v-model.number="timeForm.activityId" class="form-select">
           <option :value="null">{{ T.fields.none }}</option>
           <option v-for="a in activities" :key="a.id" :value="a.id">{{ a.name }}</option>
         </select>
       </div>
       <div class="field small">
         <label class="form-label">{{ T.fields.ticket }}</label>
-        <input v-model.trim="timeForm.ticketNumber" class="form-control" required>
+        <input id="input-time-ticket" v-model.trim="timeForm.ticketNumber" class="form-control" required>
       </div>
       <div class="field">
         <label class="form-label">{{ T.fields.start }}</label>
-        <input v-model="timeForm.startedAtLocal" type="datetime-local" class="form-control" required>
+        <input id="input-time-start" v-model="timeForm.startedAtLocal" type="datetime-local" class="form-control" required>
       </div>
       <div class="field">
         <label class="form-label">{{ T.fields.end }}</label>
-        <input v-model="timeForm.endedAtLocal" type="datetime-local" class="form-control" required>
+        <input id="input-time-end" v-model="timeForm.endedAtLocal" type="datetime-local" class="form-control" required>
       </div>
       <div class="field xs">
         <label class="form-label">{{ T.fields.duration_optional }}</label>
-        <input v-model.number="timeForm.durationMinutes" type="number" min="1" class="form-control" placeholder="Auto">
+        <input id="input-time-duration" v-model.number="timeForm.durationMinutes" type="number" min="1" class="form-control" placeholder="Auto">
       </div>
       <div class="btn-wrap">
-        <button type="submit" class="btn btn-primary">{{ timeForm.id ? T.buttons.update : T.buttons.save }}</button>
+        <button id="btn-time-save" type="submit" class="btn btn-primary">{{ timeForm.id ? T.buttons.update : T.buttons.save }}</button>
       </div>
       <div class="btn-wrap" v-if="timeForm.id">
         <button type="button" class="btn btn-secondary" @click="resetTimeForm">{{ T.buttons.cancel }}</button>
@@ -148,58 +148,62 @@
   </section>
 
   <!-- Kunden -->
-  <section v-if="tab==='customers'">
+  <section id="section-customers" v-if="tab==='customers'">
     <crud-entity :t="T" :title="T.crud.customers" :columns="[{key:'id',label:T.table.id},{key:'name',label:T.fields.name}]"
                  :items="customers"
                  :empty-item="{name:''}"
                  @refresh="loadCustomers"
                  create-url="/api/customers"
                  :update-url="id => `/api/customers/${id}`"
-                 :delete-url="id => `/api/customers/${id}`">
+                 :delete-url="id => `/api/customers/${id}`"
+                 :save-id="'btn-customers-save'"
+                 :input-id="'input-customer-name'">
     </crud-entity>
   </section>
 
   <!-- Tätigkeiten -->
-  <section v-if="tab==='activities'">
+  <section id="section-activities" v-if="tab==='activities'">
     <crud-entity :t="T" :title="T.crud.activities" :columns="[{key:'id',label:T.table.id},{key:'name',label:T.fields.name}]"
                  :items="activities"
                  :empty-item="{name:''}"
                  @refresh="loadActivities"
                  create-url="/api/activities"
                  :update-url="id => `/api/activities/${id}`"
-                 :delete-url="id => `/api/activities/${id}`">
+                 :delete-url="id => `/api/activities/${id}`"
+                 :save-id="'btn-activities-save'"
+                 :input-id="'input-activity-name'">
     </crud-entity>
   </section>
 
   <!-- Projekte -->
-  <section v-if="tab==='projects'">
+  <section id="section-projects" v-if="tab==='projects'">
     <h2 class="h4 mb-3">{{ T.headings.projects }}</h2>
     <form @submit.prevent="saveProject" class="one-line">
       <div class="field">
         <label class="form-label">{{ T.fields.name }}</label>
-        <input v-model.trim="projectForm.name" class="form-control" required>
+        <input id="input-project-name" v-model.trim="projectForm.name" class="form-control" required>
       </div>
       <div class="field">
         <label class="form-label">{{ T.fields.customer }}</label>
-        <select v-model.number="projectForm.customerId" class="form-select" required>
+        <select id="input-project-customer" v-model.number="projectForm.customerId" class="form-select" required>
           <option :value="''" disabled>{{ T.fields.please_select }}</option>
           <option v-for="c in customers" :key="c.id" :value="c.id">{{ c.name }}</option>
         </select>
       </div>
       <div class="field">
         <label class="form-label">{{ T.fields.ticket_url }}</label>
-        <input v-model.trim="projectForm.externalTicketUrl" class="form-control" placeholder="https://…">
+        <input id="input-project-ticket-url" v-model.trim="projectForm.externalTicketUrl" class="form-control" placeholder="https://…">
       </div>
       <div class="field small">
         <label class="form-label">{{ T.fields.ticket_login }}</label>
-        <input v-model.trim="projectForm.externalTicketLogin" class="form-control">
+        <input id="input-project-ticket-login" v-model.trim="projectForm.externalTicketLogin" class="form-control">
       </div>
       <div class="field">
         <label class="form-label">{{ T.fields.ticket_credentials }}</label>
-        <input v-model.trim="projectForm.externalTicketCredentials" class="form-control">
+        <input id="input-project-ticket-credentials" v-model.trim="projectForm.externalTicketCredentials" class="form-control">
       </div>
       <div class="btn-wrap">
-        <button type="submit" class="btn btn-primary">{{ projectForm.id ? T.buttons.update : T.buttons.save }}</button>
+        <button id="btn-project-save" type="submit" class="btn btn-primary">{{ projectForm.id ? T.buttons.update : T.buttons.save }}</button>
       </div>
       <div class="btn-wrap" v-if="projectForm.id">
         <button type="button" class="btn btn-secondary" @click="resetProjectForm">{{ T.buttons.cancel }}</button>
@@ -235,12 +239,22 @@
 <script>
 const { createApp, reactive, ref, onMounted, computed, watch } = Vue;
 
+function apiUrl(url){
+  try {
+    const base = window.APP_BASE || '';
+    if (typeof url === 'string' && url.startsWith('/')) {
+      return base + url;
+    }
+    return url;
+  } catch(e){ return url; }
+}
+
 function jsonFetch(url, options = {}) {
   const opts = Object.assign({
     credentials: 'same-origin',
     headers: {'Content-Type': 'application/json', 'X-Requested-With': 'fetch'},
   }, options);
-  return fetch(url, opts).then(async res => {
+  return fetch(apiUrl(url), opts).then(async res => {
     const text = await res.text();
     let data;
     try { data = text ? JSON.parse(text) : null; } catch(e) { data = text; }
@@ -298,7 +312,11 @@ createApp({
     function activityName(id) { if(id==null) return ''; const a = activities.value.find(x=>x.id===id); return a? a.name : id; }
     function customerName(id) { const c = customers.value.find(x=>x.id===id); return c? c.name : id; }
 
-    async function loadCustomers() { customers.value = await jsonFetch('/api/customers'); }
+    async function loadCustomers() { customers.value = await jsonFetch('/api/customers'); // Set default customer for new project form if not set or invalid
+          if (!projectForm.customerId || !customers.value.some(c => c.id === projectForm.customerId)) {
+            projectForm.customerId = customers.value.length ? customers.value[0].id : '';
+          }
+        }
     async function loadActivities() { activities.value = await jsonFetch('/api/activities'); }
     async function loadProjects() { projects.value = await jsonFetch('/api/projects'); }
     async function loadTimeBookings() { timeBookings.value = await jsonFetch('/api/time-bookings'); }
@@ -351,7 +369,7 @@ createApp({
 
     // Projects
     const projectForm = reactive({ id:null, name:'', customerId:'', externalTicketUrl:'', externalTicketLogin:'', externalTicketCredentials:'' });
-    function resetProjectForm(){ Object.assign(projectForm, { id:null, name:'', customerId:'', externalTicketUrl:'', externalTicketLogin:'', externalTicketCredentials:'' }); }
+    function resetProjectForm(){ const defaultCustomer = customers.value.length ? customers.value[0].id : ''; Object.assign(projectForm, { id:null, name:'', customerId: defaultCustomer, externalTicketUrl:'', externalTicketLogin:'', externalTicketCredentials:'' }); }
     function editProject(p){ Object.assign(projectForm, { ...p }); }
     async function saveProject(){
       const payload = { name: projectForm.name, customerId: Number(projectForm.customerId), externalTicketUrl: emptyToNull(projectForm.externalTicketUrl), externalTicketLogin: emptyToNull(projectForm.externalTicketLogin), externalTicketCredentials: emptyToNull(projectForm.externalTicketCredentials) };
@@ -429,7 +447,7 @@ createApp({
   },
   components: {
     'crud-entity': {
-      props: ['title','columns','items','emptyItem','createUrl','updateUrl','deleteUrl','t'],
+      props: ['title','columns','items','emptyItem','createUrl','updateUrl','deleteUrl','t','saveId','inputId'],
       emits: ['refresh'],
       setup(props, { emit }){
         const form = reactive({});
@@ -440,6 +458,14 @@ createApp({
         function startEdit(item){ Object.assign(form, JSON.parse(JSON.stringify(item))); editingId.value = item.id; }
         async function save(){
           error.value='';
+          // Frontend validation: prevent empty name for entities that have a name field
+          if (Object.prototype.hasOwnProperty.call(form, 'name')) {
+            const nameVal = String(form['name'] ?? '').trim();
+            if (nameVal === '') {
+              error.value = 'Field "name" is required';
+              return;
+            }
+          }
           try{
             const payload = JSON.stringify(form);
             if (editingId.value){
@@ -463,11 +489,11 @@ createApp({
           <template v-for="col in columns" :key="col.key">
             <div v-if="col.key!=='id'" class="field">
               <label class="form-label">{{ col.label }}</label>
-              <input v-model.trim="form[col.key]" class="form-control">
+              <input :id="inputId || null" v-model.trim="form[col.key]" class="form-control" :required="col.key==='name'">
             </div>
           </template>
           <div class="btn-wrap">
-            <button type="submit" class="btn btn-primary">{{ editingId ? t.buttons.update : t.buttons.create }}</button>
+            <button :id="saveId || null" type="submit" class="btn btn-primary">{{ editingId ? t.buttons.update : t.buttons.create }}</button>
           </div>
           <div class="btn-wrap" v-if="editingId">
             <button type="button" class="btn btn-secondary" @click="reset">{{ t.buttons.cancel }}</button>
