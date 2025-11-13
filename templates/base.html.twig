@@ -14,6 +14,10 @@
           return isTest ? '/index_test.php' : '';
         } catch(e){ return ''; }
       })();
+      // Expose current locale to JS
+      window.APP_LOCALE = (function(){
+        try { return document.documentElement.getAttribute('lang') || 'de'; } catch(e){ return 'de'; }
+      })();
     </script>
 </head>
 <body>

@@ -9,12 +9,21 @@
       time: {{ 'tabs.time'|trans|json_encode|raw }},
       customers: {{ 'tabs.customers'|trans|json_encode|raw }},
       projects: {{ 'tabs.projects'|trans|json_encode|raw }},
-      activities: {{ 'tabs.activities'|trans|json_encode|raw }}
+      activities: {{ 'tabs.activities'|trans|json_encode|raw }},
+      ticket_systems: {{ 'tabs.ticket_systems'|trans|json_encode|raw }},
+      statistics: {{ 'tabs.statistics'|trans|json_encode|raw }}
+    },
+    options: {
+      budget_none: {{ 'options.budget_none'|trans|json_encode|raw }},
+      budget_fixed: {{ 'options.budget_fixed'|trans|json_encode|raw }},
+      budget_tm: {{ 'options.budget_tm'|trans|json_encode|raw }}
     },
     headings: {
       new_time_booking: {{ 'headings.new_time_booking'|trans|json_encode|raw }},
       bookings: {{ 'headings.bookings'|trans|json_encode|raw }},
-      projects: {{ 'headings.projects'|trans|json_encode|raw }}
+      projects: {{ 'headings.projects'|trans|json_encode|raw }},
+      ticket_systems: {{ 'headings.ticket_systems'|trans|json_encode|raw }},
+      statistics: {{ 'headings.statistics'|trans|json_encode|raw }}
     },
     table: {
       id: {{ 'table.id'|trans|json_encode|raw }},
@@ -49,12 +58,39 @@
       ticket_url: {{ 'fields.ticket_url'|trans|json_encode|raw }},
       ticket_login: {{ 'fields.ticket_login'|trans|json_encode|raw }},
       ticket_credentials: {{ 'fields.ticket_credentials'|trans|json_encode|raw }},
+      ticket_type: {{ 'fields.ticket_type'|trans|json_encode|raw }},
+      username: {{ 'fields.username'|trans|json_encode|raw }},
+      secret: {{ 'fields.secret'|trans|json_encode|raw }},
+      url: {{ 'fields.url'|trans|json_encode|raw }},
+      ticket_system: {{ 'fields.ticket_system'|trans|json_encode|raw }},
+      budget_type: {{ 'fields.budget_type'|trans|json_encode|raw }},
+      budget: {{ 'fields.budget'|trans|json_encode|raw }},
+      hourly_rate: {{ 'fields.hourly_rate'|trans|json_encode|raw }},
+      period_range: {{ 'fields.period_range'|trans|json_encode|raw }},
       please_select: {{ 'common.please_select'|trans|json_encode|raw }},
       none: {{ 'common.none'|trans|json_encode|raw }}
     },
     crud: {
       customers: {{ 'crud.customers'|trans|json_encode|raw }},
-      activities: {{ 'crud.activities'|trans|json_encode|raw }}
+      activities: {{ 'crud.activities'|trans|json_encode|raw }},
+      ticket_systems: {{ 'crud.ticket_systems'|trans|json_encode|raw }}
+    },
+    voice: {
+      start: {{ 'voice.start'|trans|json_encode|raw }},
+      listening: {{ 'voice.listening'|trans|json_encode|raw }},
+      unsupported: {{ 'voice.unsupported'|trans|json_encode|raw }},
+      parse_failed: {{ 'voice.parse_failed'|trans|json_encode|raw }},
+      no_project_match: {{ 'voice.no_project_match'|trans|json_encode|raw }},
+      no_activity_match_optional: {{ 'voice.no_activity_match_optional'|trans|json_encode|raw }},
+      created: {{ 'voice.created'|trans|json_encode|raw }}
+    },
+    stats: {
+      current_month: {{ 'stats.current_month'|trans|json_encode|raw }},
+      last_month: {{ 'stats.last_month'|trans|json_encode|raw }},
+      quarter: {{ 'stats.quarter'|trans|json_encode|raw }},
+      current_year: {{ 'stats.current_year'|trans|json_encode|raw }},
+      time: {{ 'stats.time'|trans|json_encode|raw }},
+      revenue: {{ 'stats.revenue'|trans|json_encode|raw }}
     }
   };
 </script>
@@ -66,8 +102,11 @@
       <li class="nav-item"><button id="tab-customers" class="nav-link" :class="{active: tab==='customers'}" @click="tab='customers'">{{ T.tabs.customers }}</button></li>
       <li class="nav-item"><button id="tab-projects" class="nav-link" :class="{active: tab==='projects'}" @click="tab='projects'">{{ T.tabs.projects }}</button></li>
       <li class="nav-item"><button id="tab-activities" class="nav-link" :class="{active: tab==='activities'}" @click="tab='activities'">{{ T.tabs.activities }}</button></li>
+      <li class="nav-item"><button id="tab-ticket-systems" class="nav-link" :class="{active: tab==='tickets'}" @click="tab='tickets'">{{ T.tabs.ticket_systems }}</button></li>
+      <li class="nav-item"><button id="tab-stats" class="nav-link" :class="{active: tab==='stats'}" @click="tab='stats'">{{ T.tabs.statistics }}</button></li>
     </ul>
   </div>
+  <div v-if="error" class="alert alert-danger">{{ error }}</div>
 
   <!-- Zeitbuchungen -->
   <section id="section-time" v-if="tab==='time'">
@@ -101,16 +140,20 @@
       </div>
       <div class="field xs">
         <label class="form-label">{{ T.fields.duration_optional }}</label>
-        <input id="input-time-duration" v-model.number="timeForm.durationMinutes" type="number" min="1" class="form-control" placeholder="Auto">
+        <input id="input-time-duration" :value="computedDurationMinutes" type="number" min="1" class="form-control" placeholder="Auto" readonly>
       </div>
       <div class="btn-wrap">
         <button id="btn-time-save" type="submit" class="btn btn-primary">{{ timeForm.id ? T.buttons.update : T.buttons.save }}</button>
+      </div>
+      <div class="btn-wrap">
+        <button id="btn-time-voice" type="button" class="btn btn-outline-secondary" @click="startVoiceBooking" :disabled="voice && (voice.listening || voice.recording || voice.processing)">{{ (voice && (voice.listening || voice.recording || voice.processing)) ? (voice.message || T.voice.listening) : T.voice.start }}</button>
       </div>
       <div class="btn-wrap" v-if="timeForm.id">
         <button type="button" class="btn btn-secondary" @click="resetTimeForm">{{ T.buttons.cancel }}</button>
       </div>
     </form>
 
+    <div v-if="voice.message" class="alert" :class="voice.error ? 'alert-danger' : 'alert-info'">{{ voice.message }}</div>
     <div v-if="error" class="alert alert-danger mt-3">{{ error }}</div>
 
     <hr class="my-4">
@@ -175,6 +218,70 @@
     </crud-entity>
   </section>
 
+  <!-- Ticket-Systeme -->
+  <section id="section-ticket-systems" v-if="tab==='tickets'">
+    <h2 class="h4 mb-3">{{ T.headings.ticket_systems }}</h2>
+    <form @submit.prevent="saveTicketSystem" class="one-line">
+      <div class="field small">
+        <label class="form-label">{{ T.fields.ticket_type }}</label>
+        <select id="input-ticket-type" v-model.trim="ticketForm.type" class="form-select" required>
+          <option value="jira">Jira</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="form-label">{{ T.fields.name }}</label>
+        <input id="input-ticket-name" v-model.trim="ticketForm.name" class="form-control" placeholder="z. B. Jira ACME">
+      </div>
+      <div class="field">
+        <label class="form-label">{{ T.fields.url }}</label>
+        <input id="input-ticket-url" v-model.trim="ticketForm.url" class="form-control" placeholder="https://…">
+      </div>
+      <div class="field">
+        <label class="form-label">{{ T.fields.username }}</label>
+        <input id="input-ticket-username" v-model.trim="ticketForm.username" class="form-control" required>
+      </div>
+      <div class="field">
+        <label class="form-label">{{ T.fields.secret }}</label>
+        <input id="input-ticket-secret" v-model.trim="ticketForm.secret" class="form-control" required>
+      </div>
+      <div class="btn-wrap">
+        <button id="btn-ticket-save" type="submit" class="btn btn-primary">{{ ticketForm.id ? T.buttons.update : T.buttons.save }}</button>
+      </div>
+      <div class="btn-wrap" v-if="ticketForm.id">
+        <button type="button" class="btn btn-secondary" @click="resetTicketForm">{{ T.buttons.cancel }}</button>
+      </div>
+    </form>
+
+    <div class="table-responsive">
+      <table class="table table-striped align-middle">
+        <thead>
+          <tr>
+            <th>{{ T.table.id }}</th>
+            <th>{{ T.fields.ticket_type }}</th>
+            <th>{{ T.fields.name }}</th>
+            <th>{{ T.fields.url }}</th>
+            <th>{{ T.fields.username }}</th>
+            <th>{{ T.fields.secret }}</th>
+            <th class="text-end">{{ T.table.actions }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="t in ticketSystems" :key="t.id" @click="editTicketSystem(t)" class="clickable-row">
+            <td>{{ t.id }}</td>
+            <td class="text-capitalize">{{ t.type }}</td>
+            <td class="text-truncate max-220">{{ t.name }}</td>
+            <td class="text-truncate max-220">{{ t.url }}</td>
+            <td>{{ t.username }}</td>
+            <td>{{ maskSecret(t.secret) }}</td>
+            <td class="text-end">
+              <button class="btn btn-sm btn-outline-danger" @click.stop="deleteTicketSystem(t)">{{ T.buttons.delete }}</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
   <!-- Projekte -->
   <section id="section-projects" v-if="tab==='projects'">
     <h2 class="h4 mb-3">{{ T.headings.projects }}</h2>
@@ -191,16 +298,27 @@
         </select>
       </div>
       <div class="field">
-        <label class="form-label">{{ T.fields.ticket_url }}</label>
-        <input id="input-project-ticket-url" v-model.trim="projectForm.externalTicketUrl" class="form-control" placeholder="https://…">
-      </div>
-      <div class="field small">
-        <label class="form-label">{{ T.fields.ticket_login }}</label>
-        <input id="input-project-ticket-login" v-model.trim="projectForm.externalTicketLogin" class="form-control">
+        <label class="form-label">{{ T.fields.ticket_system }}</label>
+        <select id="input-project-ticket-system" v-model.number="projectForm.ticketSystemId" class="form-select">
+          <option :value="null">{{ T.fields.none }}</option>
+          <option v-for="t in ticketSystems" :key="t.id" :value="t.id">{{ t.name || (t.type + ' ' + t.username) }}</option>
+        </select>
       </div>
       <div class="field">
-        <label class="form-label">{{ T.fields.ticket_credentials }}</label>
-        <input id="input-project-ticket-credentials" v-model.trim="projectForm.externalTicketCredentials" class="form-control">
+        <label class="form-label">{{ T.fields.budget_type }}</label>
+        <select id="input-project-budget-type" v-model.trim="projectForm.budgetType" class="form-select">
+          <option value="none">{{ T.options.budget_none }}</option>
+          <option value="fixed_price">{{ T.options.budget_fixed }}</option>
+          <option value="tm">{{ T.options.budget_tm }}</option>
+        </select>
+      </div>
+      <div class="field small">
+        <label class="form-label">{{ T.fields.budget }}</label>
+        <input id="input-project-budget" v-model.trim="projectForm.budget" class="form-control" type="number" min="0" step="0.01" :disabled="projectForm.budgetType!=='fixed_price'">
+      </div>
+      <div class="field small">
+        <label class="form-label">{{ T.fields.hourly_rate }}</label>
+        <input id="input-project-hourly" v-model.trim="projectForm.hourlyRate" class="form-control" type="number" min="0" step="0.01" :disabled="projectForm.budgetType!=='tm'">
       </div>
       <div class="btn-wrap">
         <button id="btn-project-save" type="submit" class="btn btn-primary">{{ projectForm.id ? T.buttons.update : T.buttons.save }}</button>
@@ -214,7 +332,14 @@
       <table class="table table-striped align-middle">
         <thead>
         <tr>
-          <th>{{ T.table.id }}</th><th>{{ T.fields.name }}</th><th>{{ T.fields.customer }}</th><th>{{ T.fields.ticket_url }}</th><th>{{ T.fields.ticket_login }}</th><th>{{ T.fields.ticket_credentials }}</th><th class="text-end">{{ T.table.actions }}</th>
+          <th>{{ T.table.id }}</th>
+          <th>{{ T.fields.name }}</th>
+          <th>{{ T.fields.customer }}</th>
+          <th>{{ T.fields.ticket_system }}</th>
+          <th>{{ T.fields.budget_type }}</th>
+          <th>{{ T.fields.budget }}</th>
+          <th>{{ T.fields.hourly_rate }}</th>
+          <th class="text-end">{{ T.table.actions }}</th>
         </tr>
         </thead>
         <tbody>
@@ -222,20 +347,48 @@
           <td>{{ p.id }}</td>
           <td>{{ p.name }}</td>
           <td>{{ customerName(p.customerId) }}</td>
-          <td class="text-truncate max-220">{{ p.externalTicketUrl }}</td>
-          <td>{{ p.externalTicketLogin }}</td>
-          <td class="text-truncate max-220">{{ p.externalTicketCredentials }}</td>
+          <td class="text-truncate max-220">{{ ticketSystemLabel(p.ticketSystemId) }}</td>
+          <td>{{ budgetTypeLabel(p.budgetType) }}</td>
+          <td>{{ p.budgetType === 'fixed_price' && p.budget ? formatMoney(p.budget) : '' }}</td>
+          <td>{{ (p.budgetType === 'tm' || p.budgetType === 'fixed_price') && p.hourlyRate ? formatMoney(p.hourlyRate) : '' }}</td>
           <td class="text-end">
             <button class="btn btn-sm btn-outline-danger" @click.stop="deleteProject(p)">{{ T.buttons.delete }}</button>
           </td>
         </tr>
         </tbody>
-      </table>
+        </table>
+        </div>
+        </section>
+
+  <!-- Statistik -->
+  <section id="section-stats" v-if="tab==='stats'">
+    <h2 class="h4 mb-3">{{ T.headings.statistics }}</h2>
+    <form class="one-line" @submit.prevent>
+      <div class="field">
+        <label class="form-label">{{ T.fields.period_range }}</label>
+        <select id="input-stats-period" v-model.trim="statsPeriod" class="form-select">
+          <option value="current_month">{{ T.stats.current_month }}</option>
+          <option value="last_month">{{ T.stats.last_month }}</option>
+          <option value="quarter">{{ T.stats.quarter }}</option>
+          <option value="current_year">{{ T.stats.current_year }}</option>
+        </select>
+      </div>
+    </form>
+    <div class="row mt-4">
+      <div class="col-md-6 mb-4">
+        <h3 class="h6">{{ T.stats.time }}</h3>
+        <canvas id="chart-time" height="220"></canvas>
+      </div>
+      <div class="col-md-6 mb-4">
+        <h3 class="h6">{{ T.stats.revenue }}</h3>
+        <canvas id="chart-revenue" height="220"></canvas>
+      </div>
     </div>
   </section>
-</div>
+      </div>
 
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
 const { createApp, reactive, ref, onMounted, computed, watch } = Vue;
 
@@ -271,19 +424,40 @@ createApp({
     const T = window.T || {};
     const tab = ref('time');
     const error = ref('');
+    const voice = reactive({ listening:false, recording:false, processing:false, message:'', error:false });
 
     // shared lists
     const customers = ref([]);
     const activities = ref([]);
     const projects = ref([]);
+    const ticketSystems = ref([]);
 
     // time bookings
     const timeBookings = ref([]);
+
+    // stats
+    const statsPeriod = ref('current_month');
+    const statsData = ref({ items: [], totals: { minutes: 0, hours: 0, revenue: 0 }, start: '', end: '', period: 'current_month' });
+    let chartTime = null;
+    let chartRevenue = null;
+
+    // Ticket systems form
+    const ticketForm = reactive({ id:null, type:'jira', name:'', url:'', username:'', secret:'' });
+
     // Prefill datetime fields with current local time and +15 minutes
     const now = new Date();
     const startDefault = toLocalInputValue(now);
     const endDefault = toLocalInputValue(addMinutes(now, 15));
     const timeForm = reactive({ id:null, projectId:'', activityId:null, ticketNumber:'', startedAtLocal:startDefault, endedAtLocal:endDefault, durationMinutes:null });
+
+    // Derived duration in minutes from start/end (read-only display)
+    const computedDurationMinutes = computed(() => {
+      const s = parseLocalInputValue(timeForm.startedAtLocal);
+      const e = parseLocalInputValue(timeForm.endedAtLocal);
+      if (!s || !e) return '';
+      const diff = Math.round((e.getTime() - s.getTime()) / 60000);
+      return diff > 0 ? diff : '';
+    });
 
     function resetTimeForm() {
       const nowReset = new Date();
@@ -311,6 +485,29 @@ createApp({
     function projectName(id) { const p = projects.value.find(x=>x.id===id); return p? p.name : id; }
     function activityName(id) { if(id==null) return ''; const a = activities.value.find(x=>x.id===id); return a? a.name : id; }
     function customerName(id) { const c = customers.value.find(x=>x.id===id); return c? c.name : id; }
+    function ticketSystemLabel(id) {
+      if (id === null || id === undefined || id === '' || Number(id) <= 0) return T.fields.none;
+      const t = ticketSystems.value.find(x => x.id === id);
+      if (!t) return id;
+      const preferred = (t.name && t.name.trim()) ? t.name.trim() : '';
+      return preferred || (t.type + ' ' + (t.username || ''));
+    }
+    function budgetTypeLabel(type) {
+      switch (type) {
+        case 'fixed_price': return T.options.budget_fixed;
+        case 'tm': return T.options.budget_tm;
+        case 'none':
+        default: return T.options.budget_none;
+      }
+    }
+    function formatMoney(val) {
+      try {
+        const num = Number(val);
+        if (Number.isNaN(num)) return val;
+        // keep simple 2-decimal formatting; currency symbol not specified
+        return num.toFixed(2);
+      } catch (e) { return val; }
+    }
 
     async function loadCustomers() { customers.value = await jsonFetch('/api/customers'); // Set default customer for new project form if not set or invalid
           if (!projectForm.customerId || !customers.value.some(c => c.id === projectForm.customerId)) {
@@ -320,6 +517,187 @@ createApp({
     async function loadActivities() { activities.value = await jsonFetch('/api/activities'); }
     async function loadProjects() { projects.value = await jsonFetch('/api/projects'); }
     async function loadTimeBookings() { timeBookings.value = await jsonFetch('/api/time-bookings'); }
+    async function loadTicketSystems() { ticketSystems.value = await jsonFetch('/api/ticket-systems'); }
+
+    // ===== Statistics =====
+    async function loadStats() {
+      try {
+        const data = await jsonFetch(`/api/stats?period=${encodeURIComponent(statsPeriod.value)}`);
+        statsData.value = data || { items: [], totals: { minutes:0, hours:0, revenue:0 } };
+        renderCharts();
+      } catch(e) { error.value = e.message || String(e); }
+    }
+    function renderCharts(){
+      const labels = (statsData.value.items || []).map(it => it.projectName);
+      const hoursData = (statsData.value.items || []).map(it => it.hours);
+      const revenueData = (statsData.value.items || []).map(it => it.revenue);
+      const colors = labels.map((_,i)=> `hsl(${(i*57)%360} 70% 55%)`);
+      // Destroy old charts to avoid duplicates
+      try { if (chartTime) { chartTime.destroy(); chartTime = null; } } catch(_){ }
+      try { if (chartRevenue) { chartRevenue.destroy(); chartRevenue = null; } } catch(_){ }
+      const ct = document.getElementById('chart-time');
+      const cr = document.getElementById('chart-revenue');
+      if (ct && window.Chart) {
+        chartTime = new Chart(ct, {
+          type: 'pie',
+          data: { labels, datasets: [{ data: hoursData, backgroundColor: colors }] },
+          options: { plugins: { legend: { position: 'bottom' } } }
+        });
+      }
+      if (cr && window.Chart) {
+        chartRevenue = new Chart(cr, {
+          type: 'pie',
+          data: { labels, datasets: [{ data: revenueData, backgroundColor: colors }] },
+          options: { plugins: { legend: { position: 'bottom' } } }
+        });
+      }
+    }
+
+    // ===== Voice input for creating a time booking =====
+    async function startVoiceBooking(){
+      voice.error = false; voice.message = '';
+      const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (Rec) {
+        // Native Web Speech API path (Chrome, Edge)
+        const rec = new Rec();
+        rec.lang = (window.APP_LOCALE === 'en' || window.APP_LOCALE === 'en_US' || window.APP_LOCALE === 'en-GB') ? 'en-US' : 'de-DE';
+        rec.interimResults = false; rec.maxAlternatives = 1;
+        rec.onstart = ()=>{ voice.listening = true; voice.message = T.voice.listening; };
+        rec.onerror = (e)=>{ voice.error = true; voice.message = (e && e.error) ? (T.voice.unsupported + ' ('+e.error+')') : T.voice.unsupported; voice.listening = false; };
+        rec.onend = ()=>{ voice.listening = false; };
+        rec.onresult = async (evt)=>{
+          voice.listening = false;
+          try{
+            const transcript = (evt.results && evt.results[0] && evt.results[0][0]) ? String(evt.results[0][0].transcript||'') : '';
+            await processTranscript(transcript);
+          } catch(err){ voice.error = true; voice.message = (err && err.message) ? err.message : T.voice.parse_failed; }
+        };
+        try{ rec.start(); }catch(e){ voice.error = true; voice.message = T.voice.unsupported; }
+        return;
+      }
+
+      // Fallback for Firefox: record short audio and send to backend STT
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const chunks = [];
+        const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : (MediaRecorder.isTypeSupported('audio/ogg') ? 'audio/ogg' : 'audio/webm');
+        const recorder = new MediaRecorder(stream, { mimeType });
+        voice.recording = true; voice.message = T.voice.recording;
+        recorder.ondataavailable = (e)=>{ if (e.data && e.data.size) chunks.push(e.data); };
+        recorder.onstop = async ()=>{
+          try {
+            voice.recording = false; voice.processing = true; voice.message = T.voice.processing;
+            const blob = new Blob(chunks, { type: mimeType });
+            const fd = new FormData();
+            fd.append('audio', blob, 'recording.' + (mimeType.includes('ogg') ? 'ogg' : 'webm'));
+            const res = await fetch(apiUrl('/api/speech-to-text'), { method:'POST', body: fd, headers: { 'X-Requested-With':'fetch' } });
+            const data = await res.json();
+            if (!res.ok) { throw new Error(data && data.error ? data.error : ('HTTP ' + res.status)); }
+            const transcript = String(data.transcript || '');
+            await processTranscript(transcript);
+            voice.processing = false; voice.error = false; if (!voice.message) voice.message = T.voice.created;
+          } catch(err) {
+            voice.processing = false; voice.error = true; voice.message = (err && err.message) ? err.message : T.voice.parse_failed;
+          } finally {
+            try { stream.getTracks().forEach(t=>t.stop()); } catch(_) {}
+          }
+        };
+        recorder.start();
+        // Record for a short, fixed window (e.g., 7 seconds)
+        setTimeout(()=>{ if (recorder.state === 'recording') recorder.stop(); }, 7000);
+      } catch (err) {
+        // Permission denied or unsupported
+        voice.error = true;
+        if (err && (err.name === 'NotAllowedError' || err.name === 'NotFoundError')) {
+          voice.message = T.voice.permission_denied;
+        } else {
+          voice.message = T.voice.unsupported;
+        }
+      }
+    }
+
+    async function processTranscript(transcript){
+      const intent = parseVoiceBooking(transcript);
+      if (!intent) { voice.error = true; voice.message = T.voice.parse_failed; return; }
+      if (intent.projectId == null) { voice.error = true; voice.message = T.voice.no_project_match; return; }
+      timeForm.projectId = intent.projectId;
+      if (intent.activityId != null) { timeForm.activityId = intent.activityId; }
+      timeForm.ticketNumber = intent.ticket || '';
+      timeForm.startedAtLocal = toLocalInputValue(intent.start);
+      timeForm.endedAtLocal = toLocalInputValue(intent.end);
+      await saveTimeBooking();
+    }
+
+    function parseVoiceBooking(text){
+      if (!text) return null;
+      const original = text.trim();
+      const lower = original.toLowerCase();
+      // duration
+      let m = lower.match(/(\d+)[\s\-]?((min|minute|minuten)|(h|stunde|stunden|hour|hours))/);
+      let minutes = 0;
+      if (m){
+        const n = parseInt(m[1], 10);
+        const unit = m[2] || '';
+        if (/^min|minute|minuten$/.test(unit)) minutes = n;
+        else minutes = n * 60;
+      }
+      if (minutes <= 0){
+        // fallback common words like "halbe stunde" ~ 30
+        if (lower.includes('halbe stunde') || lower.includes('half an hour') || lower.includes('half hour')) minutes = 30;
+      }
+      if (minutes <= 0) return null;
+
+      // Extract project name after keyword
+      const projIdx = Math.max(lower.indexOf('projekt '), lower.indexOf('project '));
+      let projectName = '';
+      if (projIdx >= 0){
+        projectName = original.substring(projIdx).replace(/^.*?(projekt|project)\s+/i,'');
+        projectName = projectName.split(/\s+(?:für|for)\b/i)[0];
+        projectName = projectName.split(/\s+(?:tätigkeit|activity)\b/i)[0];
+        projectName = projectName.replace(/[\.,;:!\?]+$/,'').trim();
+      }
+
+      // Extract activity name after keyword (optional)
+      const actIdx = Math.max(lower.indexOf('tätigkeit '), lower.indexOf('activity '));
+      let activityName = '';
+      if (actIdx >= 0){
+        activityName = original.substring(actIdx).replace(/^.*?(tätigkeit|activity)\s+/i,'');
+        activityName = activityName.split(/\s+(?:für|for)\b/i)[0];
+        activityName = activityName.replace(/[\.,;:!\?]+$/,'').trim();
+      }
+
+      // ticket (optional): try to find a token like ticket <word>
+      let ticket = '';
+      const tMatch = lower.match(/ticket\s+([a-z0-9\-_/]+)/i);
+      if (tMatch){
+        ticket = original.substring(tMatch.index||0).split(/\s+/)[1] || '';
+      }
+
+      const projId = matchByName(projects.value, projectName);
+      const actId = activityName ? matchByName(activities.value, activityName) : null;
+
+      const start = new Date(); start.setSeconds(0,0);
+      const end = new Date(start.getTime() + minutes*60000);
+      return { projectId: projId, activityId: actId, start, end, ticket };
+    }
+
+    function normalize(str){ return (String(str||'').toLowerCase()).normalize('NFD').replace(/\p{Diacritic}/gu,''); }
+    function matchByName(list, needle){
+      if (!needle){
+        // fallback to first when only one exists
+        return list.length === 1 ? list[0].id : null;
+      }
+      const n = normalize(needle);
+      // exact
+      let found = list.find(x => normalize(x.name) === n);
+      if (found) return found.id;
+      // substring
+      found = list.find(x => normalize(x.name).includes(n));
+      if (found) return found.id;
+      // startsWith
+      found = list.find(x => normalize(x.name).startsWith(n));
+      return found ? found.id : null;
+    }
 
     async function saveTimeBooking() {
       error.value='';
@@ -331,7 +709,7 @@ createApp({
           startedAt: localToIso(timeForm.startedAtLocal),
           endedAt: localToIso(timeForm.endedAtLocal),
         };
-        if (timeForm.durationMinutes) payload.durationMinutes = Number(timeForm.durationMinutes);
+        // Duration is derived from start/end on the server; do not send a stale client value.
         if (timeForm.id) {
           // update
           const updated = await jsonFetch(`/api/time-bookings/${timeForm.id}`, { method:'PUT', body: JSON.stringify(payload) });
@@ -353,7 +731,8 @@ createApp({
         ticketNumber: tb.ticketNumber,
         startedAtLocal: isoToLocal(tb.startedAt),
         endedAtLocal: isoToLocal(tb.endedAt),
-        durationMinutes: tb.durationMinutes,
+        // duration is derived from start/end; keep internal field null to avoid stale values
+        durationMinutes: null,
       });
       tab.value = 'time';
     }
@@ -368,22 +747,46 @@ createApp({
     }
 
     // Projects
-    const projectForm = reactive({ id:null, name:'', customerId:'', externalTicketUrl:'', externalTicketLogin:'', externalTicketCredentials:'' });
-    function resetProjectForm(){ const defaultCustomer = customers.value.length ? customers.value[0].id : ''; Object.assign(projectForm, { id:null, name:'', customerId: defaultCustomer, externalTicketUrl:'', externalTicketLogin:'', externalTicketCredentials:'' }); }
-    function editProject(p){ Object.assign(projectForm, { ...p }); }
+    const projectForm = reactive({ id:null, name:'', customerId:'', ticketSystemId:null, budgetType:'none', budget:'', hourlyRate:'' });
+    function resetProjectForm(){ const defaultCustomer = customers.value.length ? customers.value[0].id : ''; Object.assign(projectForm, { id:null, name:'', customerId: defaultCustomer, ticketSystemId: null, budgetType:'none', budget:'', hourlyRate:'' }); }
+    function editProject(p){ Object.assign(projectForm, { id:p.id, name:p.name, customerId:p.customerId, ticketSystemId: p.ticketSystemId ?? null, budgetType: p.budgetType || 'none', budget: p.budget || '', hourlyRate: p.hourlyRate || '' }); }
     async function saveProject(){
-      const payload = { name: projectForm.name, customerId: Number(projectForm.customerId), externalTicketUrl: emptyToNull(projectForm.externalTicketUrl), externalTicketLogin: emptyToNull(projectForm.externalTicketLogin), externalTicketCredentials: emptyToNull(projectForm.externalTicketCredentials) };
-      if (projectForm.id) {
-        const updated = await jsonFetch(`/api/projects/${projectForm.id}`, { method:'PUT', body: JSON.stringify(payload) });
-        const idx = projects.value.findIndex(x=>x.id===updated.id);
-        if (idx>=0) projects.value[idx] = updated; else projects.value.unshift(updated);
+      error.value = '';
+      const payload = { name: projectForm.name, customerId: Number(projectForm.customerId), budgetType: projectForm.budgetType };
+      if (projectForm.ticketSystemId === null || projectForm.ticketSystemId === '' || Number.isNaN(Number(projectForm.ticketSystemId))) {
+        payload.ticketSystemId = null;
       } else {
-        const created = await jsonFetch('/api/projects', { method:'POST', body: JSON.stringify(payload) });
-        projects.value.unshift(created);
+        payload.ticketSystemId = Number(projectForm.ticketSystemId);
       }
-      resetProjectForm();
+      // apply budget rules
+      if (projectForm.budgetType === 'fixed_price') {
+        payload.budget = projectForm.budget === '' ? null : Number(projectForm.budget);
+      } else if (projectForm.budgetType === 'tm') {
+        payload.hourlyRate = projectForm.hourlyRate === '' ? null : Number(projectForm.hourlyRate);
+      }
+      try {
+        if (projectForm.id) {
+          const updated = await jsonFetch(`/api/projects/${projectForm.id}`, { method:'PUT', body: JSON.stringify(payload) });
+          const idx = projects.value.findIndex(x=>x.id===updated.id);
+          if (idx>=0) projects.value[idx] = updated; else projects.value.unshift(updated);
+        } else {
+          const created = await jsonFetch('/api/projects', { method:'POST', body: JSON.stringify(payload) });
+          projects.value.unshift(created);
+        }
+        resetProjectForm();
+      } catch(e) {
+        error.value = e.message || String(e);
+      }
     }
-    async function deleteProject(p){ if(!confirm(T.confirm.delete_project)) return; await jsonFetch(`/api/projects/${p.id}`, { method:'DELETE' }); projects.value = projects.value.filter(x=>x.id!==p.id); if(projectForm.id===p.id) resetProjectForm(); }
+    async function deleteProject(p){
+      if(!confirm(T.confirm.delete_project)) return;
+      error.value = '';
+      try {
+        await jsonFetch(`/api/projects/${p.id}`, { method:'DELETE' });
+        projects.value = projects.value.filter(x=>x.id!==p.id);
+        if(projectForm.id===p.id) resetProjectForm();
+      } catch(e) { error.value = e.message || String(e); }
+    }
 
     function emptyToNull(v){ return v===null || v===undefined || v==='' ? null : v; }
 
@@ -433,17 +836,49 @@ createApp({
       }
     });
 
+    function resetTicketForm(){ Object.assign(ticketForm, { id:null, type:'jira', name:'', url:'', username:'', secret:'' }); }
+    function maskSecret(s){ try{ if(!s) return ''; return s.length <= 6 ? '••••' : (s.substring(0,3) + '…' + s.substring(s.length-2)); }catch(e){ return '••••'; } }
+    function editTicketSystem(item){ Object.assign(ticketForm, { id:item.id, type:item.type, name:item.name || '', url:item.url || '', username:item.username, secret:item.secret }); }
+    async function saveTicketSystem(){
+      error.value='';
+      const payload = JSON.stringify({ type: ticketForm.type, name: ticketForm.name || '', url: (ticketForm.url||'')||null, username: ticketForm.username, secret: ticketForm.secret });
+      try{
+        if (ticketForm.id){
+          await jsonFetch(`/api/ticket-systems/${ticketForm.id}`, { method:'PUT', body: payload });
+        } else {
+          await jsonFetch('/api/ticket-systems', { method:'POST', body: payload });
+        }
+        resetTicketForm();
+        await loadTicketSystems();
+      } catch(e){ error.value = e.message || String(e); }
+    }
+    async function deleteTicketSystem(item){ if(!confirm(T.confirm.delete_entry)) return; try{ await jsonFetch(`/api/ticket-systems/${item.id}`, { method:'DELETE' }); await loadTicketSystems(); if(ticketForm.id===item.id) resetTicketForm(); } catch(e){ error.value = e.message || String(e); } }
+
     onMounted(async () => {
-      await Promise.all([loadCustomers(), loadActivities()]);
+      await Promise.all([loadCustomers(), loadActivities(), loadTicketSystems()]);
       await loadProjects();
       await loadTimeBookings();
+      // Lazy-load stats once tab is opened; if default tab becomes stats in future, also load immediately
+      if (tab.value === 'stats') { await loadStats(); }
     });
 
-    return { T, tab, error, customers, activities, projects, timeBookings, timeForm, projectForm,
+    watch(() => statsPeriod.value, async () => {
+      if (tab.value === 'stats') {
+        await loadStats();
+      }
+    });
+    watch(() => tab.value, async (nv) => {
+      if (nv === 'stats') { await loadStats(); }
+    });
+
+    return { T, tab, error, voice, customers, activities, projects, ticketSystems, timeBookings, timeForm, projectForm, ticketForm, statsPeriod, statsData,
       // expose loaders so @refresh handlers in templates can call them
-      loadCustomers, loadActivities, loadProjects, loadTimeBookings,
-      saveTimeBooking, resetTimeForm, formatDateTime, projectName, activityName, customerName,
-      editTime, deleteTime, saveProject, editProject, deleteProject, resetProjectForm };
+      loadCustomers, loadActivities, loadProjects, loadTimeBookings, loadTicketSystems, loadStats,
+      saveTimeBooking, resetTimeForm, formatDateTime, projectName, activityName, customerName, ticketSystemLabel, budgetTypeLabel, formatMoney,
+      editTime, deleteTime, saveProject, editProject, deleteProject, resetProjectForm,
+      // ticket systems
+      saveTicketSystem, editTicketSystem, deleteTicketSystem, resetTicketForm, maskSecret,
+      startVoiceBooking };
   },
   components: {
     'crud-entity': {

@@ -16,11 +16,15 @@ tabs.time: "Time bookings"
 tabs.customers: "Customers"
 tabs.projects: "Projects"
 tabs.activities: "Activities"
+tabs.ticket_systems: "Ticket systems"
+tabs.statistics: "Statistics"
 
 # Headings
 headings.new_time_booking: "New time booking"
 headings.bookings: "Bookings"
 headings.projects: "Projects"
+headings.ticket_systems: "Ticket systems"
+headings.statistics: "Statistics"
 
 # Fields
 fields.project: "Project"
@@ -34,6 +38,15 @@ fields.customer: "Customer"
 fields.ticket_url: "Ticket URL"
 fields.ticket_login: "Ticket login"
 fields.ticket_credentials: "Ticket credentials"
+fields.ticket_type: "Ticket type"
+fields.username: "Username"
+fields.secret: "Password/Token"
+fields.url: "URL"
+fields.ticket_system: "Ticket system"
+fields.budget_type: "Budget type"
+fields.budget: "Budget"
+fields.hourly_rate: "Hourly rate"
+fields.period_range: "Period"
 
 # Buttons
 buttons.save: "Save"
@@ -59,6 +72,7 @@ confirm.delete_project: "Delete project?"
 # CRUD titles
 crud.customers: "Customers"
 crud.activities: "Activities"
+crud.ticket_systems: "Ticket systems"
 
 # App
 app.title: "Time Tracking"
@@ -66,6 +80,10 @@ app.title: "Time Tracking"
 # Common
 common.please_select: "Please select…"
 common.none: "– none –"
+options:
+  budget_none: "no budget"
+  budget_fixed: "Fixed price"
+  budget_tm: "Time and Material"
 
 # Errors (generic)
 errors.unexpected: "Unexpected error. Please try again later."
@@ -77,3 +95,24 @@ errors.not_found: "Resource not found."
 settings.title: "Settings"
 settings.language: "Language"
 settings.saved: "Settings have been saved."
+
+# Voice input
+voice.start: "Book via voice"
+voice.listening: "Listening… please speak"
+voice.recording: "Recording… please speak"
+voice.processing: "Processing your recording…"
+voice.permission_denied: "Microphone access denied. Please check permissions."
+voice.unsupported: "Speech recognition is not supported by this browser."
+voice.parse_failed: "Could not understand the request. Try for example: \"Book 30 minutes for project Alpha for activity Planning\"."
+voice.no_project_match: "No matching project found – please specify the project name clearly."
+voice.no_activity_match_optional: "No matching activity found – will book without activity."
+voice.created: "Time booking created via voice."
+
+# Stats
+stats:
+  current_month: "Current month"
+  last_month: "Last month"
+  quarter: "Current quarter"
+  current_year: "Current year"
+  time: "Time (hours)"
+  revenue: "Revenue"

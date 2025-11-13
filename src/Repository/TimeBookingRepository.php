@@ -71,4 +71,46 @@ class TimeBookingRepository extends ServiceEntityRepository
         }
         return (bool) $qb->getQuery()->getOneOrNullResult();
     }
+
+    /**
+     * Sum of durationMinutes for a given project.
+     */
+    public function sumMinutesByProject(Project $project): int
+    {
+        $qb = $this->createQueryBuilder('tb')
+            ->select('COALESCE(SUM(tb.durationMinutes), 0) as total')
+            ->where('tb.project = :project')
+            ->setParameter('project', $project);
+        $res = $qb->getQuery()->getSingleScalarResult();
+        return (int) $res;
+    }
+
+    /**
+     * Aggregiere gebuchte Minuten je Projekt im Zeitraum [start, end).
+     * Liefert zusätzlich Budgettyp und Stundensatz des Projekts für Umsatzberechnung.
+     *
+     * @return array<int, array{projectId:int, projectName:string, minutes:int, budgetType:string, hourlyRate:?string}>
+     */
+    public function aggregateByProjectInRange(\DateTimeImmutable $start, \DateTimeImmutable $end): array
+    {
+        $qb = $this->createQueryBuilder('tb')
+            ->select('p.id AS projectId, p.name AS projectName, COALESCE(SUM(tb.durationMinutes), 0) AS minutes, p.budgetType AS budgetType, p.hourlyRate AS hourlyRate')
+            ->join('tb.project', 'p')
+            ->where('tb.startedAt >= :start')
+            ->andWhere('tb.startedAt < :end')
+            ->groupBy('p.id')
+            ->addGroupBy('p.name')
+            ->addGroupBy('p.budgetType')
+            ->addGroupBy('p.hourlyRate')
+            ->orderBy('p.name', 'ASC')
+            ->setParameter('start', $start)
+            ->setParameter('end', $end);
+
+        $rows = $qb->getQuery()->getArrayResult();
+        // Cast minutes to int explicitly
+        foreach ($rows as &$r) {
+            $r['minutes'] = (int) $r['minutes'];
+        }
+        return $rows;
+    }
 }

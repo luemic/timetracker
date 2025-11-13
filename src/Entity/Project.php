@@ -22,7 +22,7 @@ class Project
     #[ORM\JoinColumn(nullable: false)]
     private ?Customer $customer = null;
 
-    // External ticket system info
+    // External ticket system info (legacy fields, kept for backward compatibility)
     #[ORM\Column(type: 'string', length: 2048, nullable: true)]
     private ?string $externalTicketUrl = null;
 
@@ -32,6 +32,11 @@ class Project
     #[ORM\Column(type: 'string', length: 4096, nullable: true)]
     private ?string $externalTicketCredentials = null;
 
+    // Optional 1:1 link to TicketSystem
+    #[ORM\OneToOne(cascade: ['persist'], orphanRemoval: false)]
+    #[ORM\JoinColumn(name: 'ticket_system_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
+    private ?TicketSystem $ticketSystem = null;
+
     /** @var Collection<int, ProjectActivity> */
     #[ORM\OneToMany(mappedBy: 'project', targetEntity: ProjectActivity::class, cascade: ['persist', 'remove'])]
     private Collection $projectActivities;
@@ -39,6 +44,19 @@ class Project
     /** @var Collection<int, TimeBooking> */
     #[ORM\OneToMany(mappedBy: 'project', targetEntity: TimeBooking::class, cascade: ['persist', 'remove'])]
     private Collection $timeBookings;
+
+    // Budget handling
+    // Type: none | fixed_price | tm (time & material)
+    #[ORM\Column(type: 'string', length: 32, options: ['default' => 'none'])]
+    private string $budgetType = 'none';
+
+    // Total budget amount (e.g., EUR) for fixed price projects
+    #[ORM\Column(type: 'decimal', precision: 10, scale: 2, nullable: true)]
+    private ?string $budget = null; // store as string per Doctrine decimal best practice
+
+    // Hourly rate (e.g., EUR/hour). For fixed price, derived from budget / booked hours
+    #[ORM\Column(type: 'decimal', precision: 10, scale: 2, nullable: true)]
+    private ?string $hourlyRate = null; // store as string per Doctrine decimal best practice
 
     public function __construct()
     {
@@ -111,6 +129,17 @@ class Project
         return $this;
     }
 
+    public function getTicketSystem(): ?TicketSystem
+    {
+        return $this->ticketSystem;
+    }
+
+    public function setTicketSystem(?TicketSystem $ts): self
+    {
+        $this->ticketSystem = $ts;
+        return $this;
+    }
+
     /** @return Collection<int, ProjectActivity> */
     public function getProjectActivities(): Collection
     {
@@ -164,4 +193,42 @@ class Project
 
         return $this;
     }
+
+    public function getBudgetType(): string
+    {
+        return $this->budgetType;
+    }
+
+    public function setBudgetType(string $budgetType): self
+    {
+        $budgetType = in_array($budgetType, ['none','fixed_price','tm'], true) ? $budgetType : 'none';
+        $this->budgetType = $budgetType;
+        return $this;
+    }
+
+    public function getBudget(): ?string
+    {
+        return $this->budget;
+    }
+
+    public function setBudget(?string $budget): self
+    {
+        $this->budget = $budget;
+        return $this;
+    }
+
+    public function getHourlyRate(): ?string
+    {
+        return $this->hourlyRate;
+    }
+
+    public function setHourlyRate(?string $hourlyRate): self
+    {
+        $this->hourlyRate = $hourlyRate;
+        return $this;
+    }
+
+    public function isBudgetNone(): bool { return $this->budgetType === 'none'; }
+    public function isBudgetFixedPrice(): bool { return $this->budgetType === 'fixed_price'; }
+    public function isBudgetTimeAndMaterial(): bool { return $this->budgetType === 'tm'; }
 }

@@ -37,6 +37,10 @@ class TimeBooking
     #[ORM\Column(type: 'integer')]
     private int $durationMinutes = 0;
 
+    // External worklog identifier from the ticket system (e.g., Jira worklog ID)
+    #[ORM\Column(type: 'string', length: 128, nullable: true)]
+    private ?string $worklogId = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -123,6 +127,17 @@ class TimeBooking
     {
         $this->durationMinutes = $minutes;
 
+        return $this;
+    }
+
+    public function getWorklogId(): ?string
+    {
+        return $this->worklogId;
+    }
+
+    public function setWorklogId(?string $worklogId): self
+    {
+        $this->worklogId = $worklogId;
         return $this;
     }
 }

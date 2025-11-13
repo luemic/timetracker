@@ -16,11 +16,15 @@ tabs.time: "Zeitbuchungen"
 tabs.customers: "Kunden"
 tabs.projects: "Projekte"
 tabs.activities: "Tätigkeiten"
+tabs.ticket_systems: "Ticket-Systeme"
+tabs.statistics: "Statistik"
 
 # Headings
 headings.new_time_booking: "Neue Zeitbuchung"
 headings.bookings: "Buchungen"
 headings.projects: "Projekte"
+headings.ticket_systems: "Ticket-Systeme"
+headings.statistics: "Statistik"
 
 # Fields
 fields.project: "Projekt"
@@ -34,6 +38,15 @@ fields.customer: "Kunde"
 fields.ticket_url: "Ticket URL"
 fields.ticket_login: "Ticket Login"
 fields.ticket_credentials: "Ticket Credentials"
+fields.ticket_type: "Ticket-Typ"
+fields.username: "Benutzername"
+fields.secret: "Passwort/Token"
+fields.url: "URL"
+fields.ticket_system: "Ticket-System"
+fields.budget_type: "Budgettyp"
+fields.budget: "Budget"
+fields.hourly_rate: "Stundensatz"
+fields.period_range: "Zeitraum"
 
 # Buttons
 buttons.save: "Speichern"
@@ -59,6 +72,7 @@ confirm.delete_project: "Projekt löschen?"
 # CRUD titles
 crud.customers: "Kunden"
 crud.activities: "Tätigkeiten"
+crud.ticket_systems: "Ticket-Systeme"
 
 # App
 app.title: "Zeiterfassung"
@@ -66,6 +80,10 @@ app.title: "Zeiterfassung"
 # Common
 common.please_select: "Bitte wählen…"
 common.none: "– keine –"
+options:
+  budget_none: "kein Budget"
+  budget_fixed: "Festpreis"
+  budget_tm: "Time and Material"
 
 # Errors (generic)
 errors.unexpected: "Unerwarteter Fehler. Bitte versuchen Sie es später erneut."
@@ -77,3 +95,24 @@ errors.not_found: "Ressource wurde nicht gefunden."
 settings.title: "Einstellungen"
 settings.language: "Sprache"
 settings.saved: "Einstellungen wurden gespeichert."
+
+# Voice input
+voice.start: "Per Spracheingabe buchen"
+voice.listening: "Zuhören… bitte sprechen"
+voice.recording: "Nimmt auf… bitte sprechen"
+voice.processing: "Verarbeite Sprachaufnahme…"
+voice.permission_denied: "Mikrofon-Zugriff verweigert. Bitte Berechtigungen prüfen."
+voice.unsupported: "Spracherkennung wird von diesem Browser nicht unterstützt."
+voice.parse_failed: "Konnte die Angaben nicht verstehen. Bitte erneut versuchen (z. B. \"Ich möchte 30 Minuten für Projekt Alpha für Tätigkeit Planung buchen\")."
+voice.no_project_match: "Kein Projekt gefunden – bitte Projektname klar benennen."
+voice.no_activity_match_optional: "Tätigkeit nicht gefunden – es wird ohne Tätigkeit gebucht."
+voice.created: "Zeitbuchung per Spracheingabe erstellt."
+
+# Stats
+stats:
+  current_month: "Aktueller Monat"
+  last_month: "Letzter Monat"
+  quarter: "Aktuelles Quartal"
+  current_year: "Aktuelles Jahr"
+  time: "Zeit (Stunden)"
+  revenue: "Umsatz"

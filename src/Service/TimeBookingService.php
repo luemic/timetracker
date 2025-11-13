@@ -22,7 +22,31 @@ class TimeBookingService
         private readonly ActivityRepository $activities,
         private readonly EntityManagerInterface $em,
         private readonly ?Security $security = null,
+        private readonly ?\App\TicketSystem\TicketSystemClientFactory $tsFactory = null,
     ) {}
+
+    private function getClientForProject(\App\Entity\Project $project): ?\App\TicketSystem\TicketSystemClientInterface
+    {
+        return $this->tsFactory?->forProject($project);
+    }
+
+    private function recalcProjectRateIfFixedPrice(?\App\Entity\Project $project): void
+    {
+        if (!$project) { return; }
+        if (!$project->isBudgetFixedPrice()) { return; }
+        $budget = $project->getBudget();
+        if ($budget === null || !is_numeric($budget)) { return; }
+        $minutes = $this->timeBookings->sumMinutesByProject($project);
+        if ($minutes > 0) {
+            $hours = $minutes / 60.0;
+            $rate = (float)$budget / $hours;
+            $project->setHourlyRate(number_format($rate, 2, '.', ''));
+        } else {
+            $project->setHourlyRate(null);
+        }
+        // Flush in same transaction context if any
+        try { $this->em->flush(); } catch (\Throwable) {}
+    }
 
     /**
      * Return all time bookings sorted by ID ascending and scoped to current user if available.
@@ -100,10 +124,11 @@ class TimeBookingService
             throw new \InvalidArgumentException('Ungültiges Datumsformat für "endedAt". Erwartet ISO 8601, z. B. 2025-10-25T12:15:00Z oder 2025-10-25T12:15:00+02:00.');
         }
         if ($ended <= $started) { throw new \InvalidArgumentException('endedAt must be after startedAt'); }
-        $minutes = (int)($data['durationMinutes'] ?? 0);
+        // Duration is always derived from start/end on the server and rounded up to 15 minutes
+        $diffSeconds = $ended->getTimestamp() - $started->getTimestamp();
+        $minutes = (int) (ceil($diffSeconds / 900) * 15); // 900s = 15min
         if ($minutes <= 0) {
-            $minutes = (int) round(($ended->getTimestamp() - $started->getTimestamp()) / 60);
-            if ($minutes <= 0) { throw new \InvalidArgumentException('durationMinutes must be > 0'); }
+            throw new \InvalidArgumentException('endedAt must be after startedAt');
         }
 
         // Prevent overlapping bookings for same user and project
@@ -127,7 +152,38 @@ class TimeBookingService
         if ($user instanceof User) {
             $timeBooking->setUser($user);
         }
-        $this->timeBookings->save($timeBooking, true);
+
+        // External ticket system integration: create worklog first, then DB persist in a transaction
+        $client = $this->getClientForProject($project);
+        if ($client) {
+            // create external worklog
+            $externalId = null;
+            try {
+                $externalId = $client->createWorklog($ticketNumber, $started, $minutes);
+                $timeBooking->setWorklogId($externalId);
+                // persist in DB transaction
+                $this->em->wrapInTransaction(function() use ($timeBooking) {
+                    $this->timeBookings->save($timeBooking, true);
+                });
+            } catch (\Throwable $e) {
+                // compensation: if we have created an external worklog but DB failed afterwards, try to delete it
+                if ($externalId) {
+                    try { $client->deleteWorklog($ticketNumber, $externalId); } catch (\Throwable) {}
+                }
+                throw $e instanceof \InvalidArgumentException ? $e : new \RuntimeException($e->getMessage(), 0, $e);
+            }
+        } else {
+            // External ticket system configured but no usable client available → do not persist locally
+            if ($project->getTicketSystem() !== null) {
+                throw new \RuntimeException('Externes Ticket-System ist für dieses Projekt konfiguriert, aber der passende Client ist nicht verfügbar. Bitte installieren/konfigurieren Sie die Integration.');
+            }
+            // No ticket system linked → persist locally only
+            $this->timeBookings->save($timeBooking, true);
+        }
+
+        // Recalculate derived hourly rate for fixed price projects
+        $this->recalcProjectRateIfFixedPrice($project);
+
         return $this->toArray($timeBooking);
     }
 
@@ -147,63 +203,131 @@ class TimeBookingService
             ? $this->timeBookings->findOneBy(['id' => $id, 'user' => $user])
             : $this->timeBookings->find($id);
         if (!$timeBooking) return null;
+
+        // Derive new values (do not persist yet)
+        $newProject = $timeBooking->getProject();
         if (array_key_exists('projectId', $data)) {
             $projectId = $data['projectId'];
             if (!is_numeric($projectId)) { throw new \InvalidArgumentException('projectId must be numeric'); }
-            $project = $this->projects->find((int)$projectId);
-            if (!$project) { throw new \RuntimeException('Project not found'); }
-            $timeBooking->setProject($project);
+            $p = $this->projects->find((int)$projectId);
+            if (!$p) { throw new \RuntimeException('Project not found'); }
+            $newProject = $p;
         }
+        $newActivity = $timeBooking->getActivity();
         if (array_key_exists('activityId', $data)) {
             $activityId = $data['activityId'];
             if ($activityId === null) {
-                $timeBooking->setActivity(null);
+                $newActivity = null;
             } else {
                 if (!is_numeric($activityId)) { throw new \InvalidArgumentException('activityId must be numeric or null'); }
                 $activity = $this->activities->find((int)$activityId);
                 if (!$activity) { throw new \RuntimeException('Activity not found'); }
-                $timeBooking->setActivity($activity);
+                $newActivity = $activity;
             }
         }
-        // Parse and apply provided datetimes with validation
+        $newStarted = $timeBooking->getStartedAt();
         if (array_key_exists('startedAt', $data)) {
-            try {
-                $timeBooking->setStartedAt(new DateTimeImmutable((string)$data['startedAt']));
-            } catch (\Throwable $exception) {
-                throw new \InvalidArgumentException('Ungültiges Datumsformat für "startedAt". Erwartet ISO 8601, z. B. 2025-10-25T12:00:00Z oder 2025-10-25T12:00:00+02:00.');
-            }
+            try { $newStarted = new DateTimeImmutable((string)$data['startedAt']); }
+            catch (\Throwable) { throw new \InvalidArgumentException('Ungültiges Datumsformat für "startedAt". Erwartet ISO 8601, z. B. 2025-10-25T12:00:00Z oder 2025-10-25T12:00:00+02:00.'); }
         }
+        $newEnded = $timeBooking->getEndedAt();
         if (array_key_exists('endedAt', $data)) {
-            try {
-                $timeBooking->setEndedAt(new DateTimeImmutable((string)$data['endedAt']));
-            } catch (\Throwable $exception) {
-                throw new \InvalidArgumentException('Ungültiges Datumsformat für "endedAt". Erwartet ISO 8601, z. B. 2025-10-25T12:15:00Z oder 2025-10-25T12:15:00+02:00.');
-            }
+            try { $newEnded = new DateTimeImmutable((string)$data['endedAt']); }
+            catch (\Throwable) { throw new \InvalidArgumentException('Ungültiges Datumsformat für "endedAt". Erwartet ISO 8601, z. B. 2025-10-25T12:15:00Z oder 2025-10-25T12:15:00+02:00.'); }
         }
-        // Validate time order: endedAt must be strictly after startedAt
-        if ($timeBooking->getEndedAt() <= $timeBooking->getStartedAt()) {
+        if ($newEnded <= $newStarted) { throw new \InvalidArgumentException('endedAt must be after startedAt'); }
+        // Duration is always derived from start/end and rounded up to 15 minutes
+        $diffSecondsUpd = $newEnded->getTimestamp() - $newStarted->getTimestamp();
+        $newMinutes = (int) (ceil($diffSecondsUpd / 900) * 15);
+        if ($newMinutes <= 0) {
             throw new \InvalidArgumentException('endedAt must be after startedAt');
         }
-        // Prevent overlapping with other bookings of same user & project
-        if ($user) {
-            $projectForCheck = $timeBooking->getProject();
-            $startedForCheck = $timeBooking->getStartedAt();
-            $endedForCheck = $timeBooking->getEndedAt();
-            if ($projectForCheck && $this->timeBookings->existsOverlap($user, $projectForCheck, $startedForCheck, $endedForCheck, $timeBooking->getId())) {
-                throw new \InvalidArgumentException('Zeitüberschneidung: Der Zeitraum überlappt mit einer bestehenden Buchung (gleiches Projekt, gleicher Benutzer).');
-            }
-        }
+        $newTicket = $timeBooking->getTicketNumber();
         if (array_key_exists('ticketNumber', $data)) {
             $ticket = trim((string)$data['ticketNumber']);
             if ($ticket === '') { throw new \InvalidArgumentException('ticketNumber must not be empty'); }
-            $timeBooking->setTicketNumber($ticket);
+            $newTicket = $ticket;
         }
-        if (array_key_exists('durationMinutes', $data)) {
-            $minutes = (int)$data['durationMinutes'];
-            if ($minutes <= 0) { throw new \InvalidArgumentException('durationMinutes must be > 0'); }
-            $timeBooking->setDurationMinutes($minutes);
+
+        // Prevent overlapping with other bookings of same user & (new) project
+        if ($user) {
+            if ($newProject && $this->timeBookings->existsOverlap($user, $newProject, $newStarted, $newEnded, $timeBooking->getId())) {
+                throw new \InvalidArgumentException('Zeitüberschneidung: Der Zeitraum überlappt mit einer bestehenden Buchung (gleiches Projekt, gleicher Benutzer).');
+            }
         }
-        $this->em->flush();
+
+        // External first
+        $createdExternalId = null;
+        $oldProject = $timeBooking->getProject();
+        $oldTicket = $timeBooking->getTicketNumber();
+        $oldWid = $timeBooking->getWorklogId();
+        $ticketOrProjectChanged = ($oldTicket !== $newTicket) || (($oldProject?->getId() ?? 0) !== ($newProject?->getId() ?? 0));
+
+        $newClient = $newProject ? $this->getClientForProject($newProject) : null;
+        if ($newProject && $newProject->getTicketSystem() !== null && !$newClient) {
+            throw new \RuntimeException('Externes Ticket-System ist für dieses Projekt konfiguriert, aber der passende Client ist nicht verfügbar. Bitte installieren/konfigurieren Sie die Integration.');
+        }
+
+        // If the ticket key or project changed and there is an existing external worklog, we cannot move it – delete old then create new
+        if ($ticketOrProjectChanged && $oldWid) {
+            $oldClient = $oldProject ? $this->getClientForProject($oldProject) : null;
+            if ($oldProject && $oldProject->getTicketSystem() !== null && !$oldClient) {
+                throw new \RuntimeException('Externes Ticket-System ist für das ursprüngliche Projekt konfiguriert, aber der Client ist nicht verfügbar – Aktualisierung nicht möglich.');
+            }
+            if ($oldClient) {
+                $deleted = false;
+                try { $deleted = $oldClient->deleteWorklog($oldTicket, $oldWid); } catch (\Throwable $e) { $deleted = false; }
+                if (!$deleted) {
+                    throw new \RuntimeException('Externer Worklog konnte nicht vom ursprünglichen Ticket entfernt werden.');
+                }
+            }
+            // After successful deletion, clear local wid so DB reflects new one after creation
+            $timeBooking->setWorklogId(null);
+        }
+
+        if ($newClient) {
+            try {
+                $wid = $timeBooking->getWorklogId();
+                if ($wid && !$ticketOrProjectChanged) {
+                    // Same ticket/project → update existing external worklog
+                    $newClient->updateWorklog($newTicket, $wid, $newStarted, $newMinutes);
+                } else {
+                    // No existing external worklog or target changed → create a new one on target issue
+                    $createdExternalId = $newClient->createWorklog($newTicket, $newStarted, $newMinutes);
+                }
+            } catch (\Throwable $e) {
+                throw new \RuntimeException($e->getMessage(), 0, $e);
+            }
+        }
+
+        // Now persist DB in a transaction
+        try {
+            $this->em->wrapInTransaction(function() use ($timeBooking, $newProject, $newActivity, $newStarted, $newEnded, $newTicket, $newMinutes, $createdExternalId) {
+                $timeBooking->setProject($newProject);
+                $timeBooking->setActivity($newActivity);
+                $timeBooking->setStartedAt($newStarted);
+                $timeBooking->setEndedAt($newEnded);
+                $timeBooking->setTicketNumber($newTicket);
+                $timeBooking->setDurationMinutes($newMinutes);
+                if ($createdExternalId) {
+                    $timeBooking->setWorklogId($createdExternalId);
+                }
+                $this->em->flush();
+            });
+            // After successful update, recalc rates for affected projects
+            // Recalculate for both old and new project if they differ
+            $this->recalcProjectRateIfFixedPrice($oldProject);
+            if (($oldProject?->getId() ?? 0) !== ($newProject?->getId() ?? 0)) {
+                $this->recalcProjectRateIfFixedPrice($newProject);
+            }
+        } catch (\Throwable $e) {
+            // Compensation if we created a new external worklog for this update
+            if ($newClient && $createdExternalId) {
+                try { $newClient->deleteWorklog($newTicket, $createdExternalId); } catch (\Throwable) {}
+            }
+            throw $e instanceof \InvalidArgumentException ? $e : new \RuntimeException($e->getMessage(), 0, $e);
+        }
+
         return $this->toArray($timeBooking);
     }
 
@@ -218,7 +342,39 @@ class TimeBookingService
             ? $this->timeBookings->findOneBy(['id' => $id, 'user' => $user])
             : $this->timeBookings->find($id);
         if (!$timeBooking) return false;
-        $this->timeBookings->remove($timeBooking, true);
+
+        // If linked to an external ticket system, always delete externally first (even when worklogId is missing)
+        $project = $timeBooking->getProject();
+        $client = $project ? $this->getClientForProject($project) : null;
+        $hasExternal = $project && $project->getTicketSystem() !== null;
+        if ($hasExternal) {
+            if (!$client) {
+                throw new \RuntimeException('Externes Ticket-System ist für dieses Projekt konfiguriert, aber der passende Client ist nicht verfügbar. Bitte installieren/konfigurieren Sie die Integration.');
+            }
+            $ticket = $timeBooking->getTicketNumber();
+            $wid = $timeBooking->getWorklogId();
+            $ok = false;
+            try {
+                if ($wid) {
+                    $ok = $client->deleteWorklog($ticket, (string)$wid);
+                } else {
+                    // Resolve by signature (startedAt + duration) if we don't have a stored external id
+                    $ok = $client->deleteWorklogBySignature($ticket, $timeBooking->getStartedAt(), $timeBooking->getDurationMinutes());
+                }
+            } catch (\Throwable) {
+                $ok = false;
+            }
+            if (!$ok) {
+                throw new \RuntimeException('Externer Worklog konnte nicht gelöscht werden. Bitte versuchen Sie es später erneut.');
+            }
+        }
+
+        // Delete locally (transactional)
+        $this->em->wrapInTransaction(function() use ($timeBooking) {
+            $this->timeBookings->remove($timeBooking, true);
+        });
+        // Recalc for the project the booking belonged to
+        $this->recalcProjectRateIfFixedPrice($project);
         return true;
     }
 
@@ -237,6 +393,7 @@ class TimeBookingService
             'endedAt' => $timeBooking->getEndedAt()->format(DATE_ATOM),
             'ticketNumber' => $timeBooking->getTicketNumber(),
             'durationMinutes' => $timeBooking->getDurationMinutes(),
+            'worklogId' => $timeBooking->getWorklogId(),
         ];
     }
 }
